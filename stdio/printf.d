@@ -36,16 +36,31 @@ extern (C):
 @system:
 @nogc:
 
+extern (C) void putchar() {}
+
 // To use in no-dependency printf
 void _putchar(char* character) {
-  asm @nogc{
-    mov     RAX, 0x2000004;
-      mov     RDI, 1;
-      mov     RSI, character;
-      mov     RDX, 1;
-      syscall;
-  }
+    version(aarch64) {
+        import ldc.llvmasm.__asm;
+        __asm(`
+            mov     r0, #1          //stdout
+            ldr     r1, $1
+            ldr     r2, 1           //length
+            mov     r7, 4           //SYS_WRITE
+            swi     0
+        `, "", character);
+    } else version(X86_64) {
+        asm @nogc{
+            mov     RAX, 0x2000004;
+            mov     RDI, 1;
+            mov     RSI, character;
+            mov     RDX, 1;
+            syscall;
+        }
+    }
 }
+
+extern(C) alias putchar = _putchar;
 
 // 'ntoa' conversion buffer size, this must be big enough to hold one converted
 // numeric number including padded zeros (dynamically created on stack)
@@ -882,7 +897,7 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern(C) int printf_(const char* format, ...)
+extern(C) int printf(const char* format, ...)
 {
   va_list va;
   va_start(va, format);

@@ -5,6 +5,6 @@ extern (C) int abs(int a)
 
 unittest
 {
-	//assert(abs(-1) == 1);
- //   assert(abs(1)  == 1);
+	assert(abs(-1) == 1);
+ 	assert(abs(1)  == 1);
 }

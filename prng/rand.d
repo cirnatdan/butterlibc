@@ -1,4 +1,4 @@
-shared static ulong seed;
+__gshared static ulong seed;
 
 @nogc
 extern(C) void srand(uint s)

@@ -12,6 +12,8 @@
  * Source:    https://github.com/dlang/druntime/blob/master/src/core/stdc/stdio.d
  * Standards: ISO/IEC 9899:1999 (E)
  */
+module stdio;
+
 version (OSX)
     version = Darwin;
 else version (iOS)
@@ -23,9 +25,13 @@ else version (WatchOS)
 
 private
 {
-    import core.stdc.config;
-    import core.stdc.stdarg; // for va_list
-    import core.stdc.stdint : intptr_t;
+    import config;
+    import stdarg; // for va_list
+    import stdint : intptr_t;
+    import wchar_;
+    import errno;
+    import posix.locale;
+    import posix.sys.types;
 
   version (FreeBSD)
   {
@@ -104,7 +110,7 @@ else version (CRuntime_Microsoft)
     /// Actually 260 since Visual Studio 2015.
     enum int     L_tmpnam   = _P_tmpdir.length + 12;
 }
-else version (CRuntime_Glibc)
+else version (Linux_Glibc)
 {
     enum
     {
@@ -122,7 +128,7 @@ else version (CRuntime_Glibc)
         L_tmpnam     = 20
     }
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     enum
     {
@@ -336,7 +342,7 @@ else version (CRuntime_UClibc)
         EOF          = -1,
         ///
         FOPEN_MAX    = 16,
-        ///
+        ///LOCALE_NAME_MAX 23
         FILENAME_MAX = 4095,
         ///
         TMP_MAX      = 238328,
@@ -395,66 +401,46 @@ else version (CRuntime_Microsoft)
     ///
     alias shared(_iobuf) FILE;
 }
-else version (CRuntime_Glibc)
+else version(Linux_Musl)
 {
-    import core.stdc.wchar_ : mbstate_t;
-    ///
-    struct fpos_t
-    {
-        long __pos; // couldn't use off_t because of static if issue
-        mbstate_t __state;
+    enum {
+        F_NORD = 4,
+        F_ERR  = 32,
+        F_EOF  = 16,
     }
-
-    ///
-    struct _IO_FILE
-    {
-        int     _flags;
-        char*   _read_ptr;
-        char*   _read_end;
-        char*   _read_base;
-        char*   _write_base;
-        char*   _write_ptr;
-        char*   _write_end;
-        char*   _buf_base;
-        char*   _buf_end;
-        char*   _save_base;
-        char*   _backup_base;
-        char*   _save_end;
-        void*   _markers;
-        _IO_FILE* _chain;
-        int     _fileno;
-        int     _flags2;
-        ptrdiff_t _old_offset;
-        ushort  _cur_column;
-        byte    _vtable_offset;
-        char[1] _shortbuf = 0;
-        void*   _lock;
-
-        ptrdiff_t _offset;
-
-        /*_IO_codecvt*/ void* _codecvt;
-        /*_IO_wide_data*/ void* _wide_data;
-        _IO_FILE *_freeres_list;
-        void *_freeres_buf;
-        size_t __pad5;
-        int _mode;
-
-        char[15 * int.sizeof - 4 * (void*).sizeof - size_t.sizeof] _unused2;
-    }
-
-    ///
-    alias _IO_FILE _iobuf;
-    ///
-    alias shared(_IO_FILE) FILE;
-}
-else version (CRuntime_Musl)
-{
     union fpos_t
     {
         char[16] __opaque = 0;
         double __align;
     }
-    struct _IO_FILE;
+    extern(C) struct _IO_FILE {
+	    uint flags;
+	    ubyte* rpos, rend;
+	    int function(FILE*) close;
+	    ubyte* wend, wpos;
+	    ubyte *mustbezero_1;
+	    ubyte *wbase;
+	    @nogc nothrow size_t function(FILE *, ubyte *, size_t) read;
+	    @nogc nothrow size_t function(FILE *, const ubyte *, size_t) write;
+	    off_t function(FILE *, off_t, int) seek;
+	    ubyte *buf;
+	    size_t buf_size;
+	    FILE* prev, next;
+	    int fd;
+	    int pipe_pid;
+	    long lockcount;
+	    int mode;
+	    /*volatile*/ int lock;
+	    int lbf;
+	    void *cookie;
+	    off_t off;
+	    char *getln_buf;
+	    void *mustbezero_2;
+	    ubyte *shend;
+	    off_t shlim, shcnt;
+	    FILE* prev_locked, next_locked;
+	    __locale_struct *locale;
+    };
 
     ///
     alias _IO_FILE _iobuf; // needed for phobos
@@ -499,7 +485,7 @@ else version (Darwin)
     ///
     alias __sFILE _iobuf;
     ///
-    alias shared(__sFILE) FILE;
+    alias __sFILE FILE;
 }
 else version (FreeBSD)
 {
@@ -936,9 +922,9 @@ else version (Darwin)
         _IONBF = 2,
     }
 
-    private extern shared FILE* __stdinp;
-    private extern shared FILE* __stdoutp;
-    private extern shared FILE* __stderrp;
+    private extern(C) shared FILE* __stdinp;
+    private extern(C) shared FILE* __stdoutp;
+    private extern(C) shared FILE* __stderrp;
 
     ///
     alias __stdinp  stdin;
@@ -1087,7 +1073,7 @@ else version (CRuntime_Bionic)
     ///
     shared stderr = &__sF[2];
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     // needs tail const
     extern shared FILE* stdin;
@@ -1226,13 +1212,21 @@ version (MinGW)
 else
 {
     ///
-    int fprintf(FILE* stream, scope const char* format, ...);
+    int fprintf(FILE* stream, scope const char* format, ...)
+    {
+        //stub
+        return 0;
+    }
     ///
     int fscanf(FILE* stream, scope const char* format, ...);
     ///
     int sprintf(scope char* s, scope const char* format, ...);
     ///
-    int sscanf(scope const char* s, scope const char* format, ...);
+    int sscanf(scope const char* s, scope const char* format, ...)
+    {
+        //stub
+        return 0;
+    }
     ///
     int vfprintf(FILE* stream, scope const char* format, va_list arg);
     ///
@@ -1257,17 +1251,139 @@ else
     ///
     int fgetc(FILE* stream);
     ///
-    int fputc(int c, FILE* stream);
+    int fputc(int c, FILE* stream) {
+        //stub
+        return 0;
+    }
+}
+
+//https://github.com/unofficial-opensource-apple/Libc/blob/aec41eec4ba22ce5873263632f3724b4be89bd5e/stdio/FreeBSD/rget.c
+version (Darwin) {
+    int __srget(FILE *fp)
+    {
+        if (__srefill(fp) == 0) {
+            fp._r--;
+            return (*fp._p++);
+        }
+        return (EOF);
+    }
+//https://github.com/unofficial-opensource-apple/Libc/blob/aec41eec4ba22ce5873263632f3724b4be89bd5e/include/stdio.h#L395
+    int __sgetc(FILE *f)
+    {
+        return --f._r < 0 ? __srget(f) : cast(int)(*f._p++);
+    }
+
+    int getc_unlocked(FILE *f)
+    {
+        return __sgetc(f);
+    }
+}
+version (Linux_Musl) { //musl
+    int __toread(FILE *f)
+    {
+        int mode = f.mode | f.mode - 1;
+	    f.mode = mode;
+	    if (f.wpos != f.wbase) f.write(f, cast(const(ubyte*))0, cast(ulong)0);
+	    f.wpos = f.wbase = f.wend = cast(ubyte*)0;
+	    if (f.flags & F_NORD) {
+	        int flags = f.flags | F_ERR;
+		    f.flags = flags;
+		    return EOF;
+	    }
+	    f.rpos = f.rend = f.buf + f.buf_size;
+	    return (f.flags & F_EOF) ? EOF : 0;
+    }
+
+    int __uflow(FILE *f)
+    {
+	    ubyte c;
+	    if (!__toread(f) && f.read(f, &c, 1)==1) return c;
+	    return EOF;
+    }
+
+    extern(C) int getc_unlocked(FILE *f)
+    {
+        if (f.rpos != f.rend) {
+            *(f).rpos = cast(ubyte)(*(f).rpos + 1);
+            return *(f).rpos;
+        }
+        return __uflow(f);
+    }
+}
+//musl
+static wint_t __fgetwc_unlocked_internal(FILE *f)
+{
+    wchar_t wc;
+    int c;
+    size_t l;
+
+    /* Convert character from buffer if possible */
+    //if (f.rpos != f.rend) {
+    //    l = mbtowc(&wc, cast(void *)f.rpos, f.rend - f.rpos);
+    //    if (l+1 >= 1) {
+    //        f.rpos += l + !l; /* l==0 means 1 byte, null */
+    //        return wc;
+    //    }
+    //}
+
+    /* Convert character byte-by-byte */
+    mbstate_t st = cast(mbstate_t)0;
+    ubyte b;
+    int first = 1;
+    do {
+        c = getc_unlocked(f);
+        b = cast(ubyte)c;
+        if (c < 0) {
+            //TODO: fix errno if (!first) errno = EILSEQ;
+            return WEOF;
+        }
+        l = mbrtowc(&wc, cast(const char *)&b, 1, &st);
+        if (l == -1) {
+            if (!first) ungetc(b, f);
+            return WEOF;
+        }
+        first = 0;
+    } while (l == -2);
+
+    return wc;
+}
+//musl
+wint_t __fgetwc_unlocked(FILE *f)
+{
+    shared(locale_t*) ploc = &CURRENT_LOCALE;
+    shared(locale_t) loc = *ploc;
+    if (f.mode <= 0) fwide(f, 1);
+    *ploc = f.locale;
+    wchar_t wc = __fgetwc_unlocked_internal(f);
+    *ploc = loc;
+    return wc;
+}
+//musl
+wint_t fgetwc(FILE* fp)
+{
+    wint_t c;
+    //TODO FLOCK(f);
+    c = __fgetwc_unlocked(fp);
+    //TODO FUNLOCK(f);
+    return c;
 }
 
 ///
 char* fgets(char* s, int n, FILE* stream);
 ///
-int   fputs(scope const char* s, FILE* stream);
+int   fputs(scope const char* s, FILE* stream)
+{
+    //stub
+    return 0;
+}
 ///
 char* gets(char* s);
 ///
-int   puts(scope const char* s);
+int   puts(scope const char* s)
+{
+    //stub
+    return 0;
+}
 
 // No unsafe pointer manipulation.
 extern (D) @trusted
@@ -1288,7 +1404,11 @@ extern (D) @trusted
 ///
 size_t fread(scope void* ptr, size_t size, size_t nmemb, FILE* stream);
 ///
-size_t fwrite(scope const void* ptr, size_t size, size_t nmemb, FILE* stream);
+size_t fwrite(scope const void* ptr, size_t size, size_t nmemb, FILE* stream)
+{
+    //stub
+    return 0;
+}
 
 // No unsafe pointer manipulation.
 @trusted
@@ -1433,6 +1553,84 @@ else version (Darwin)
     int  snprintf(scope char* s, size_t n, scope const char* format, ...);
     ///
     int  vsnprintf(scope char* s, size_t n, scope const char* format, va_list arg);
+
+    //https://github.com/unofficial-opensource-apple/Libc/blob/aec41eec4ba22ce5873263632f3724b4be89bd5e/stdio/FreeBSD/refill.c#L154
+    int __srefill0(FILE *fp)
+    {
+
+        /* make sure stdio is set up */
+        pthread_once(&__sdidinit, __sinit);
+
+        ORIENT(fp, -1);
+
+        fp._r = 0;     /* largely a convenience for callers */
+
+        /* SysV does not make this test; take it out for compatibility */
+        if (fp._flags & __SEOF)
+            return (EOF);
+
+        /* if not already reading, have to be reading and writing */
+        if ((fp._flags & __SRD) == 0) {
+            if ((fp._flags & __SRW) == 0) {
+                errno = EBADF;
+                fp._flags |= __SERR;
+                return (EOF);
+            }
+            /* switch to reading */
+            if (fp._flags & __SWR) {
+                if (__sflush(fp))
+                    return (EOF);
+                fp._flags &= ~__SWR;
+                fp._w = 0;
+                fp._lbfsize = 0;
+            }
+            fp._flags |= __SRD;
+        } else {
+            /*
+             * We were reading.  If there is an ungetc buffer,
+             * we must have been reading from that.  Drop it,
+             * restoring the previous buffer (if any).  If there
+             * is anything in that buffer, return.
+             */
+            if (HASUB(fp)) {
+                FREEUB(fp);
+                if ((fp._r = fp._ur) != 0) {
+                    fp._p = fp._up;
+                    return (0);
+                }
+            }
+        }
+
+        if (fp._bf._base == NULL)
+            __smakebuf(fp);
+
+        /*
+         * Before reading from a line buffered or unbuffered file,
+         * flush all line buffered output files, per the ANSI C
+         * standard.
+         */
+        if (fp._flags & (__SLBF|__SNBF)) {
+            /* Ignore this file in _fwalk to avoid potential deadlock. */
+            fp._flags |= __SIGN;
+            cast(void) _fwalk(lflush);
+            fp._flags &= ~__SIGN;
+
+            /* Now flush this file without locking it. */
+            if ((fp_flags & (__SLBF|__SWR)) == (__SLBF|__SWR))
+                __sflush(fp);
+        }
+        return (1);
+    }
+
+    //https://github.com/unofficial-opensource-apple/Libc/blob/aec41eec4ba22ce5873263632f3724b4be89bd5e/stdio/FreeBSD/refill.c#L154
+    int __srefill(FILE *fp)
+    {
+        int ret;
+
+        if ((ret = __srefill0(fp)) <= 0)
+            return ret;
+        return __srefill1(fp);
+    }
 }
 else version (FreeBSD)
 {
@@ -1644,7 +1842,7 @@ else version (CRuntime_Bionic)
     ///
     int  vsnprintf(scope char* s, size_t n, scope const char* format, va_list arg);
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     @trusted
     {

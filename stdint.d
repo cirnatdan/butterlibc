@@ -11,13 +11,10 @@
  * Source:    $(DRUNTIMESRC core/stdc/_stdint.d)
  * Standards: ISO/IEC 9899:1999 (E)
  */
-
-module stdint;
-
-private import core.stdc.config;
-private import core.stdc.stddef; // for wchar_t
-private import core.stdc.signal; // for sig_atomic_t
-private import core.stdc.wchar_; // for wint_t
+private import config;
+private import stddef; // for wchar_t
+//private import signal; // for sig_atomic_t
+private import wchar_; // for wint_t
 
 
 // Can't be `private` because of @@@BUG11173@@@.
@@ -266,9 +263,9 @@ enum ptrdiff_t PTRDIFF_MIN = ptrdiff_t.min;
 enum ptrdiff_t PTRDIFF_MAX = ptrdiff_t.max;
 
 ///
-enum sig_atomic_t SIG_ATOMIC_MIN = sig_atomic_t.min;
+//enum sig_atomic_t SIG_ATOMIC_MIN = sig_atomic_t.min;
 ///
-enum sig_atomic_t SIG_ATOMIC_MAX = sig_atomic_t.max;
+//enum sig_atomic_t SIG_ATOMIC_MAX = sig_atomic_t.max;
 
 ///
 enum size_t  SIZE_MAX  = size_t.max;
