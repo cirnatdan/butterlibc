@@ -6,6 +6,5 @@ extern(C) void debug_print(char* msg, short* length) {
 	    mov     RSI, msg;
 	    mov     RDX, length;
 	    syscall;
-
 	}
 }

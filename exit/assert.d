@@ -12,3 +12,8 @@ extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const 
 	    }
     }
 }
+
+extern (C) void __assert(const char* file, const char* x, uint line)
+{
+    assert(false, "not implemented");
+}

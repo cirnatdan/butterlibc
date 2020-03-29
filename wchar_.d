@@ -16,7 +16,7 @@ private import config;
 private import stdarg; // for va_list
 private import stdio;  // for FILE, not exposed per spec
 public import stddef;  // for wchar_t
-public import core.stdc.time;    // for tm
+public import time;    // for tm
 public import stdint;  // for WCHAR_MIN, WCHAR_MAX
 
 extern (C):

@@ -68,6 +68,14 @@ version (LDC)
     }
     else version (AAPCS64)
     {
+        struct __va_list
+        {
+            void *__stack;
+            void *__gr_top;
+            void *__vr_top;
+            int   __gr_offs;
+            int   __vr_offs;
+        };
         alias va_list = __va_list;
     }
     else version (ARM)
@@ -205,7 +213,32 @@ version (LDC)
             return va_arg_intrinsic!T(ap);
     }
 
-    void va_arg(T)(ref va_list ap, ref T parmn)
+    void va_arg(ref va_list ap, int param)
+    {
+        va_arg_implementation(ap, param);
+    }
+
+    void va_arg(ref va_list ap, long param)
+    {
+        va_arg_implementation(ap, param);
+    }
+
+    void va_arg(ref va_list ap, ref double param)
+    {
+        va_arg_implementation(ap, param);
+    }
+
+    void va_arg(ref va_list ap, ref char* param)
+    {
+        va_arg_implementation(ap, param);
+    }
+
+    void va_arg(ref va_list ap, ref void* param)
+    {
+        va_arg_implementation(ap, param);
+    }
+
+    void va_arg_implementation(T)(ref va_list ap, ref T parmn)
     {
         version (SystemV_AMD64)
         {

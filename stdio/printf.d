@@ -4,7 +4,7 @@
 //
 // \license The MIT License (MIT)
 //
-//;ermission is hereby granted, free of charge, to any person obtaining a copy
+// Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
@@ -40,15 +40,10 @@ extern (C) void putchar() {}
 
 // To use in no-dependency printf
 void _putchar(char* character) {
-    version(aarch64) {
-        import ldc.llvmasm.__asm;
-        __asm(`
-            mov     r0, #1          //stdout
-            ldr     r1, $1
-            ldr     r2, 1           //length
-            mov     r7, 4           //SYS_WRITE
-            swi     0
-        `, "", character);
+    version(AArch64) {
+        import ldc.llvmasm;
+        __asm(`svc     #0`,
+         "{x0},{x1},{x2},{x8}", 1, character, 1, 64);
     } else version(X86_64) {
         asm @nogc{
             mov     RAX, 0x2000004;

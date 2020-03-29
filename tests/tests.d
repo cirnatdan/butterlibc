@@ -1,13 +1,12 @@
 import prng.rand;
-import tests.debug_print;
 
 import stdio.printf;
 
-@nogc
-extern (C) int main() {
-	printf_("successfully printed\n");
+extern(C) void test_varargs() {}
 
-	debug_print.debug_print(cast(char*)"Running tests\n", cast(short*)15);
+@nogc
+extern (C) void main() {
+	printf("Running tests\n");
 
 	srand(10);
 	int expected = 225495755;
@@ -18,16 +17,16 @@ extern (C) int main() {
 		lastdigit = random % 10;
 		lastdigit = lastdigit + 48;
 
-		debug_print.debug_print(cast(char*)&lastdigit, cast(short*)1);
+		printf(cast(char*)&lastdigit);
 		random = random / 10;
 	} while (random);
-	debug_print.debug_print(cast(char*)"\n", cast(short*)4);
+	printf(cast(char*)"\n");
 
 
 
 	if (random < 10) {
-		debug_print.debug_print(cast(char*)"smaller\n", cast(short*)13);
+		printf(cast(char*)"smaller\n");
 	}
 
-	return 0;
+	return;
 }
