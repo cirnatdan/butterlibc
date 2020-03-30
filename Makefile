@@ -24,6 +24,8 @@ test: crt0.o
 	ld -o tests.exe -static crt0.o stdio/printf.o string.o prng/rand.o stdarg.o exit/assert.o string/memcpy.o object.o tests/*.o #-macosx_version_min 10.7.0
 	./tests.exe
 
+all: libbutterc.so
+
 clean:
 	rm tests.exe || true
 	rm *.o */*.o || true
