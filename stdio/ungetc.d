@@ -2,6 +2,8 @@ module stdio.ungetc;
 
 import stdio;
 
+extern(C):
+
 int ungetc(int c, FILE *f)
 {
 	if (c == EOF) return c;
