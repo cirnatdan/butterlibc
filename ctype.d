@@ -23,7 +23,10 @@ pure int isalpha(int c);
 ///
 pure int isblank(int c);
 ///
-pure int iscntrl(int c);
+pure int iscntrl(int c)
+{
+	return cast(uint)c < 0x20 || c == 0x7f;
+}
 ///
 pure int isdigit(int c);
 ///
