@@ -40,17 +40,20 @@ pure int ispunct(int c);
 ///
 pure int isspace(int c);
 ///
-pure int isupper(int c);
+pure int isupper(int c)
+{
+    return cast(uint)c-'A' < 26;
+}
 ///
 pure int isxdigit(int c);
 ///
 pure int toupper(int c);
 
 ///
-extern(C) int __tolower(int c) 
+int tolower(int c)
 {
-	//stub
-	return 0;
+	if (isupper(c)) return c | 32;
+	return c;
 }
 
 extern (C) int __maskrune(int c, uint _f)
