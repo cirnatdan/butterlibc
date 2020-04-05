@@ -403,6 +403,8 @@ else version (CRuntime_Microsoft)
 }
 else version(Linux_Musl)
 {
+    enum UNGET = 8;
+
     enum {
         F_NORD = 4,
         F_ERR  = 32,
@@ -1076,11 +1078,11 @@ else version (CRuntime_Bionic)
 else version (Linux_Musl)
 {
     // needs tail const
-    extern shared FILE* stdin;
+    extern(C) shared FILE* stdin;
     ///
-    extern shared FILE* stdout;
+    extern(C) shared FILE* stdout;
     ///
-    extern shared FILE* stderr;
+    extern(C) shared FILE* stderr;
     enum
     {
         ///
