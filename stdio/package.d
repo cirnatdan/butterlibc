@@ -406,9 +406,11 @@ else version(Linux_Musl)
     enum UNGET = 8;
 
     enum {
+        F_PERM = 1,
         F_NORD = 4,
         F_ERR  = 32,
         F_EOF  = 16,
+        F_SVB  = 64,
     }
     union fpos_t
     {
@@ -1078,11 +1080,11 @@ else version (CRuntime_Bionic)
 else version (Linux_Musl)
 {
     // needs tail const
-    extern(C) shared FILE* stdin;
+    __gshared FILE* stdin;
     ///
-    extern(C) shared FILE* stdout;
+    extern __gshared FILE* stdout;
     ///
-    extern(C) shared FILE* stderr;
+    __gshared FILE* stderr;
     enum
     {
         ///
@@ -1281,6 +1283,7 @@ version (Darwin) {
     }
 }
 version (Linux_Musl) { //musl
+    nothrow:
     int __toread(FILE *f)
     {
         int mode = f.mode | f.mode - 1;
@@ -1296,6 +1299,7 @@ version (Linux_Musl) { //musl
 	    return (f.flags & F_EOF) ? EOF : 0;
     }
 
+    nothrow:
     int __uflow(FILE *f)
     {
 	    ubyte c;

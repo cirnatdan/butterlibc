@@ -12,6 +12,7 @@
  * Source:    $(DRUNTIMESRC core/stdc/_time.d)
  * Standards: ISO/IEC 9899:1999 (E)
  */
+module time;
 
 private import config;
 

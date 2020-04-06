@@ -8,6 +8,7 @@
  * Standards: The Open Group Base Specifications Issue 6, IEEE Std 1003.1, 2004 Edition
  * Source:    $(DRUNTIMESRC core/sys/posix/_signal.d)
  */
+ module posix.signal;
 
 private import posix.config;
 public import signal;
@@ -3680,7 +3681,7 @@ else version (CRuntime_Bionic)
         } _sigev_un_t _sigev_un;
     }
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     struct sigevent
     {
@@ -3784,7 +3785,7 @@ else version (CRuntime_Bionic)
     int pthread_kill(pthread_t, int);
     int pthread_sigmask(int, const scope sigset_t*, sigset_t*);
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     int pthread_kill(pthread_t, int);
     int pthread_sigmask(int, const scope sigset_t*, sigset_t*);

@@ -18,7 +18,7 @@ module posix.time;
 private import posix.config;
 public import time;
 public import posix.sys.types;
-public import signal; // for sigevent
+public import posix.signal; // for sigevent
 
 version (OSX)
     version = Darwin;
@@ -403,7 +403,7 @@ else version (CRuntime_Bionic)
     int timer_getoverrun(timer_t);
     int timer_settime(timer_t, int, const scope itimerspec*, itimerspec*);
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     alias int clockid_t;
     alias void* timer_t;
@@ -538,7 +538,7 @@ else version (CRuntime_Bionic)
     tm* gmtime_r(const scope time_t*, tm*);
     tm* localtime_r(const scope time_t*, tm*);
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     char* asctime_r(const scope tm*, char*);
     char* ctime_r(const scope time_t*, char*);
@@ -622,7 +622,7 @@ else version (CRuntime_Bionic)
 
     char* strptime(const scope char*, const scope char*, tm*);
 }
-else version (CRuntime_Musl)
+else version (Linux_Musl)
 {
     extern __gshared int daylight;
     extern __gshared c_long timezone;

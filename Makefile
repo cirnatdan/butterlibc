@@ -6,17 +6,19 @@ ARCH ?= aarch64
 default: crt0.o
 	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) *.d -op -debug -m64
 	$(DMD) -fPIC -betterC -c -version=$(VERSION) exit/*.d -unittest -op -debug -m64
-	$(DMD) -fPIC -betterC -c -version=$(VERSION) posix/*.d -unittest -op -debug -m64
+	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) posix/*.d -unittest -op -debug -m64
+	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) posix/sys/*.d -unittest -op -debug -m64
 	$(DMD) -fPIC -betterC -c -version=$(VERSION) stdlib/abs.d -unittest -op -debug -m64
 	$(DMD) -fPIC -betterC -c -version=$(VERSION) prng/rand.d -unittest -op -debug -m64
 	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) stdio/*.d -op -debug -m64
+	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) sys/linux/*.d -op -debug -m64
 	$(DMD) -fPIC -betterC -c -version=$(VERSION) string/*.d -op -debug -m64
 
 crt0.o: crt/$(OS)/$(ARCH)/crt0.s
 	as -o crt0.o crt/$(OS)/$(ARCH)/crt0.s
 
 libbutterc.so: default crt0.o
-	ld -o libbutterc.so */*.o *.o -shared
+	ld -o libbutterc.so */*/*.o */*.o *.o -shared
 
 test: crt0.o
 	$(DMD) -betterC -c -version=$(VERSION) tests/tests.d -op -debug -m64
