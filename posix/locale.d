@@ -10,6 +10,8 @@
  */
 module posix.locale;
 
+import stdint;
+
 version (Posix):
 extern(C):
 @system:
@@ -184,4 +186,18 @@ version (Linux_Musl)
     enum LC_GLOBAL_LOCALE = (cast(locale_t)-1);
 
     __gshared shared(__locale_struct*) CURRENT_LOCALE;
+
+    shared(__locale_struct) __c_locale = {};
+    alias C_LOCALE = __c_locale;
+
+    //__gshared shared uint32_t[5] empty_mo = [ 0x950412de, 0, -1, -1, -1 ];
+    __gshared shared(__locale_map) __c_dot_utf8 = {
+	    //map: empty_mo,
+	    //map_size: empty_mo.sizeof,
+	    name: "C.UTF-8"
+    };
+    shared(__locale_struct) __c_dot_utf8_locale = {
+	    cat: [LC_CTYPE: &__c_dot_utf8]
+    };
+    alias UTF8_LOCALE = __c_dot_utf8_locale;
 }
