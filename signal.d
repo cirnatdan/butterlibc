@@ -74,3 +74,21 @@ else version (Windows)
 sigfn_t signal(int sig, sigfn_t func);
 ///
 int     raise(int sig);
+
+version(AArch64)
+{
+    enum _NSIG = 65;
+}
+
+version(Linux_Musl)
+{
+    int __libc_current_sigrtmax()
+    {
+	    return _NSIG-1;
+    }
+
+    int __libc_current_sigrtmin()
+    {
+	    return 35;
+    }
+}

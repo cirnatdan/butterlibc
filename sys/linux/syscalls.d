@@ -750,6 +750,8 @@ else version(AArch64)
         ioctl = 29,
         close = 57,
         lseek = 62,
+        read = 63,
+        readv = 65,
         writev = 66,
     }
 

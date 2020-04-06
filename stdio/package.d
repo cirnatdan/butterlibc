@@ -408,6 +408,7 @@ else version(Linux_Musl)
     enum {
         F_PERM = 1,
         F_NORD = 4,
+        F_NOWR = 8,
         F_ERR  = 32,
         F_EOF  = 16,
         F_SVB  = 64,
