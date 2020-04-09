@@ -158,10 +158,11 @@ else
     ///
     @property int errno(int n) { return setErrno(n); }
 
+    int __erno;
     extern (C)
     {
-        private int getErrno();      // for internal use
-        private int setErrno(int);   // for internal use
+        private int getErrno() { return __erno; }      // for internal use
+        private int setErrno(int e) { return errno = e; }   // for internal use
     }
 }
 
