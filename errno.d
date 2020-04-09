@@ -57,22 +57,22 @@ else version (CRuntime_Microsoft)
         alias errno = _errno;
     }
 }
-else version (CRuntime_Glibc)
-{
-    extern (C)
-    {
-        ref int __errno_location();
-        alias errno = __errno_location;
-    }
-}
-else version (CRuntime_Musl)
-{
-    extern (C)
-    {
-        ref int __errno_location();
-        alias errno = __errno_location;
-    }
-}
+// else version (CRuntime_Glibc)
+// {
+//     extern (C)
+//     {
+//         ref int __errno_location();
+//         alias errno = __errno_location;
+//     }
+// }
+// else version (CRuntime_Musl)
+// {
+//     extern (C)
+//     {
+//         ref int __errno_location();
+//         alias errno = __errno_location;
+//     }
+// }
 else version (OpenBSD)
 {
     // https://github.com/openbsd/src/blob/master/include/errno.h

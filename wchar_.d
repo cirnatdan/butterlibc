@@ -18,6 +18,7 @@ private import stdio;  // for FILE, not exposed per spec
 public import stddef;  // for wchar_t
 public import time;    // for tm
 public import stdint;  // for WCHAR_MIN, WCHAR_MAX
+import errno;
 
 extern (C):
 @system:
@@ -282,10 +283,100 @@ int    mbsinit(const scope mbstate_t* ps);
 ///
 size_t mbrlen(const scope char* s, size_t n, mbstate_t* ps);
 ///
-size_t mbrtowc(wchar_t* pwc, const scope char* s, size_t n, mbstate_t* ps);
+//size_t mbrtowc(wchar_t* pwc, const scope char* s, size_t n, mbstate_t* ps);
 ///
 size_t wcrtomb(char* s, wchar_t wc, mbstate_t* ps);
 ///
 size_t mbsrtowcs(wchar_t* dst, const scope char** src, size_t len, mbstate_t* ps);
 ///
 size_t wcsrtombs(char* dst, const scope wchar_t** src, size_t len, mbstate_t* ps);
+
+uint32_t OOB(uint32_t c, uint32_t b) {
+    return ((((b)>>3)-0x10)|(((b)>>3)+(cast(int32_t)(c)>>26))) & ~7;
+}
+
+uint32_t R(uint32_t a, uint32_t b) { return ( a == 0x80 ? 0x40u - b : 0u - a) << 23;}
+uint32_t FAILSTATE() { return R(0x80,0x80); }
+uint32_t C(uint32_t x) { return x = ( x < 2 ? -1 : (R(0x80,0xc0) | x) ); }
+uint32_t D(uint32_t x) { return x = C(x+16); }
+uint32_t E(uint32_t x) { return x = ( x == 0 ? R(0xa0,0xc0) :
+                                          x == 0xd ? R(0x80,0xa0) :
+                                          R(0x80,0xc0))
+                                      | ( R(0x80,0xc0) >> 6 )
+                                      | x; }
+uint32_t F(uint32_t x) { return x = ( x >= 5 ? 0:
+                                          x == 0 ? R(0x90,0xc0) :
+                                          x == 4 ? R(0x80,0x90) :
+                                          R(0x80,0xc0) )
+                                      | ( R(0x80,0xc0) >> 6 )
+                                      | ( R(0x80,0xc0) >> 12 )
+                                      | x; }
+
+const uint32_t[] bittab = [
+	              C(0x2),C(0x3),C(0x4),C(0x5),C(0x6),C(0x7),
+	C(0x8),C(0x9),C(0xa),C(0xb),C(0xc),C(0xd),C(0xe),C(0xf),
+	D(0x0),D(0x1),D(0x2),D(0x3),D(0x4),D(0x5),D(0x6),D(0x7),
+	D(0x8),D(0x9),D(0xa),D(0xb),D(0xc),D(0xd),D(0xe),D(0xf),
+	E(0x0),E(0x1),E(0x2),E(0x3),E(0x4),E(0x5),E(0x6),E(0x7),
+	E(0x8),E(0x9),E(0xa),E(0xb),E(0xc),E(0xd),E(0xe),E(0xf),
+	F(0x0),F(0x1),F(0x2),F(0x3),F(0x4)
+];
+
+
+
+enum SA = 0xc2u;
+enum SB = 0xf5u;
+/*
+ * musl
+ * This code was written by Rich Felker in 2010; no copyright is claimed.
+ * This code is in the public domain. Attribution is appreciated but
+ * unnecessary.
+ */
+size_t mbrtowc(wchar_t *wc, const char *src, size_t n, mbstate_t *st)
+{
+	static uint internal_state;
+	uint c;
+    ubyte *s = cast(ubyte *)src;
+	const ulong N = n;
+
+	if (!st) st = cast(mbstate_t *)&internal_state;
+	c = *cast(uint *)st;
+
+	if (!s) {
+		s = cast(ubyte *)"";
+		wc = cast(dchar *)&wc;
+		n = 1;
+	} else if (!wc) wc = cast(dchar *)&wc;
+
+	if (!n) return -2;
+	if (!c) {
+		if (*s < 0x80) {
+            *wc = *s;
+		    return !!*wc;
+	    }
+		if (*s-SA > SB-SA) goto ilseq;
+		c = bittab[*s++-SA]; n--;
+	}
+
+	if (n) {
+		if (OOB(c,*s)) goto ilseq;
+loop:
+		c = c<<6 | *s++-0x80; n--;
+		if (!(c&(1U<<31))) {
+			*cast(uint *)st = 0;
+			*wc = c;
+			return N-n;
+		}
+		if (n) {
+			if (*s-0x80u >= 0x40) goto ilseq;
+			goto loop;
+		}
+	}
+
+	*cast(uint *)st = c;
+	return -2;
+ilseq:
+	*cast(uint *)st = FAILSTATE;
+	errno.errno(EILSEQ);
+	return -1;
+}
