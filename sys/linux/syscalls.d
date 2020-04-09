@@ -756,7 +756,7 @@ else version(AArch64)
     }
 
     import ldc.llvmasm;
-    extern(D) long __syscall(c_long n, int a, int b, int c)
+    extern(D) long __syscall(c_long n, long a, long b, long c)
     {
         return __asm!long(`svc     #0`,
          "={x0},{x8},{x0},{x1},{x2}", n, a, b, c);

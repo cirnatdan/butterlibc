@@ -204,7 +204,7 @@ int     ttyname_r(int, char*, size_t);
 int     unlink(const scope char*);
 ssize_t write(int, const scope void*, size_t);
 
-version (CRuntime_Glibc)
+version (Linux_Glibc)
 {
   static if ( __USE_FILE_OFFSET64 )
   {
@@ -284,6 +284,8 @@ else version (CRuntime_Bionic)
 }
 else version (Linux_Musl)
 {
+    import sys.linux.syscalls;
+
     int ftruncate(int, off_t) @trusted;
     off_t lseek(int fd, off_t offset, int whence) @trusted
     {
