@@ -19,6 +19,7 @@ public import stddef;  // for wchar_t
 public import time;    // for tm
 public import stdint;  // for WCHAR_MIN, WCHAR_MAX
 import errno;
+import stdlib;
 
 extern (C):
 @system:
@@ -386,3 +387,42 @@ int wctomb(char* s, wchar_t wc)
     if (!s) return 0;
     return cast(int)wcrtomb(s, wc, cast(mbstate_t*)(0));
 }
+
+bool IS_CODEUNIT(dchar c)
+{
+    return cast(uint)c - 0xdf80 < 0x80;
+}
+
+size_t wcrtomb(char* s, wchar_t wc, mbstate_t* st)
+{
+	if (!s) return 1;
+	if (cast(char)wc < 0x80) {
+		*s = cast(char)wc;
+		return 1;
+	} else if (MB_CUR_MAX == 1) {
+		if (!IS_CODEUNIT(wc)) {
+			errno.errno(EILSEQ);
+			return -1;
+		}
+		*s = cast(char)wc;
+		return 1;
+	} else if (cast(char)wc < 0x800) {
+		*s++ = cast(char)(0xc0 | (wc>>6));
+		*s = 0x80 | (wc&0x3f);
+		return 2;
+	} else if (cast(char)wc < 0xd800 || (cast(char)wc-0xe000 < 0x2000)) {
+		*s++ = cast(char)(0xe0 | (wc>>12));
+		*s++ = 0x80 | ((wc>>6)&0x3f);
+		*s = 0x80 | (wc&0x3f);
+		return 3;
+	} else if (cast(char)wc-0x10000 < 0x100000) {
+		*s++ = 0xf0 | (wc>>18);
+		*s++ = 0x80 | ((wc>>12)&0x3f);
+		*s++ = 0x80 | ((wc>>6)&0x3f);
+		*s = 0x80 | (wc&0x3f);
+		return 4;
+	}
+	errno.errno(EILSEQ);
+	return -1;
+}
+
