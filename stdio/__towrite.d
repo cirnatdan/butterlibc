@@ -1,5 +1,9 @@
+module stdio.__towrite;
+
 import stdio;
 
+@nogc:
+nothrow:
 extern (C):
 
 int __towrite(FILE *f)

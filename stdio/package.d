@@ -1256,10 +1256,7 @@ else
     ///
     int fgetc(FILE* stream);
     ///
-    int fputc(int c, FILE* stream) {
-        //stub
-        return 0;
-    }
+    //int fputc(int c, FILE* stream);
 }
 
 //https://github.com/unofficial-opensource-apple/Libc/blob/aec41eec4ba22ce5873263632f3724b4be89bd5e/stdio/FreeBSD/rget.c
@@ -1284,6 +1281,7 @@ version (Darwin) {
     }
 }
 version (Linux_Musl) { //musl
+    import stdio.__towrite;
     nothrow:
     int __toread(FILE *f)
     {
@@ -1308,6 +1306,20 @@ version (Linux_Musl) { //musl
 	    return EOF;
     }
 
+    int __overflow(FILE *f, int _c)
+    {
+        ubyte c = cast(ubyte)_c;
+
+        if (!f.wend && __towrite(f)) return EOF;
+        if (f.wpos != f.wend && c != f.lbf) {
+            auto next = f.wpos + 1;
+            f.wpos = next;
+            return *f.wpos = c;
+        }
+        if (f.write(f, &c, 1) != 1) return EOF;
+        return c;
+    }
+
     extern(C) int getc_unlocked(FILE *f)
     {
         if (f.rpos != f.rend) {
@@ -1315,6 +1327,27 @@ version (Linux_Musl) { //musl
             return *(f).rpos;
         }
         return __uflow(f);
+    }
+
+    int fputc(int c, FILE *f)
+    {
+        return do_putc(c, f);
+    }
+
+    static int do_putc(int c, FILE *f)
+    {
+        return putc_unlocked(c, f);
+    }
+
+    static int putc_unlocked(int c, FILE *f)
+    {
+        if ((cast(ubyte)c != f.lbf) && (f.wpos != f.wend)) {
+            auto next = f.wpos + 1;
+            f.wpos = next;
+            return *f.wpos = cast(ubyte)c;
+        } else {
+            return __overflow(f, cast(ubyte)c);
+        }
     }
 }
 //musl

@@ -380,3 +380,9 @@ ilseq:
 	errno.errno(EILSEQ);
 	return -1;
 }
+
+int wctomb(char* s, wchar_t wc)
+{
+    if (!s) return 0;
+    return cast(int)wcrtomb(s, wc, cast(mbstate_t*)(0));
+}

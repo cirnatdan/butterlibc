@@ -56,8 +56,13 @@ int tolower(int c)
 	return c;
 }
 
-extern (C) int __maskrune(int c, uint _f)
+int __maskrune(int c, uint _f)
 {
 	//stub
 	return 0;
+}
+
+int isascii(int c)
+{
+    return !(c&~0x7f);
 }
