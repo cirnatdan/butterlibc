@@ -6,10 +6,10 @@ import stdio.__stdio_seek;
 import stdio.__stdio_close;
 
 extern(C):
-static __gshared ubyte[BUFSIZ+UNGET] buf;
+static __gshared ubyte[BUFSIZ+UNGET] stdout_buf;
 FILE __stdout_FILE = {
-	buf: cast(shared ubyte*)buf+UNGET,
-	buf_size: (&buf-UNGET).sizeof,
+	buf: cast(shared ubyte*)stdout_buf+UNGET,
+	buf_size: (&stdout_buf-UNGET).sizeof,
 	fd: 1,
 	flags: F_PERM | F_NORD,
 	lbf: '\n',

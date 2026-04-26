@@ -742,6 +742,16 @@ else version (X86)
         statx = 383,
         arch_prctl = 384,
     }
+
+    extern(D) long __syscall(c_long n, long a, long b, long c)
+    {
+        return syscall(n, a, b, c);
+    }
+
+    extern(D) long __syscall(c_long n, int a)
+    {
+        return syscall(n, a);
+    }
 }
 else version(AArch64)
 {
@@ -769,4 +779,6 @@ else version(AArch64)
     }
 }
 
-alias __syscall syscall;
+// System call function for use by other modules
+extern (C) long syscall(c_long number, ...);
+
