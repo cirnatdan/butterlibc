@@ -509,7 +509,7 @@ else version (X86_64)
         ap = cast(__va_list*)(cast(ubyte*)&parmn + T.sizeof);
         ap.offset_regs = 6 * 8; // All registers used up
         ap.offset_fpregs = 6 * 8 + 8 * 16;
-        ap.stack_args = cast(void*)ap;
+        ap.stack_args = cast(void*)(cast(ubyte*)ap + __va_list_tag.sizeof);
         ap.reg_args = null; // No register arguments available
     }
 
