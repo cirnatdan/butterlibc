@@ -14,7 +14,7 @@ size_t __stdout_write(FILE *f, const ubyte *buf, size_t len)
 {
 	winsize wsz;
 	f.write = &__stdio_write;
-	if (!(f.flags & F_SVB) && syscall(SYS.ioctl, f.fd, TIOCGWINSZ, cast(int)&wsz))
+	if (!(f.flags & F_SVB) && ioctl(f.fd, TIOCGWINSZ, cast(int)&wsz) != 0)
 		f.lbf = -1;
 	return __stdio_write(f, buf, len);
 }

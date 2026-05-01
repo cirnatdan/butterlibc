@@ -45,9 +45,9 @@ void _putchar(char* character) {
         __asm(`svc     #0`,
          "{x0},{x1},{x2},{x8}", 1, character, 1, 64);
     } else version(X86_64) {
-        asm @nogc{
-            mov     RAX, 0x2000004;
-            mov     RDI, 1;
+        asm @nogc nothrow{
+            mov     RAX, 1;         // write syscall number
+            mov     RDI, 1;         // stdout fd
             mov     RSI, character;
             mov     RDX, 1;
             syscall;
@@ -618,8 +618,7 @@ static int _vsnprintf(out_fct_type out_fct, char* buffer, const size_t maxlen, c
       width = _atoi(&format);
     }
     else if (*format == '*') {
-      int w;
-      va_arg(va, w);
+      int w = va_arg!int(va);
       if (w < 0) {
         flags |= FLAGS_LEFT;    // reverse padding
         width = cast(uint)-w;
@@ -639,8 +638,7 @@ static int _vsnprintf(out_fct_type out_fct, char* buffer, const size_t maxlen, c
         precision = _atoi(&format);
       }
       else if (*format == '*') {
-        int prec;
-        va_arg(va, prec);
+        int prec = va_arg!int(va);
         precision = prec > 0 ? cast(uint)prec : 0U;
         format++;
       }
@@ -726,19 +724,16 @@ static if (PRINTF_SUPPORT_PTRDIFF_T) {
           // signed
           if (flags & FLAGS_LONG_LONG) {
 static if (PRINTF_SUPPORT_LONG_LONG) {
-            long value;
-            va_arg(va, value);
+            long value = va_arg!long(va);
             idx = _ntoa_long_long(out_fct, buffer, idx, maxlen, cast(ulong)(value > 0 ? value : 0 - value), value < 0, base, precision, width, flags);
 }
           }
           else if (flags & FLAGS_LONG) {
-            long value;
-            va_arg(va, value);
+            long value = va_arg!long(va);
             idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(uint)(value > 0 ? value : 0 - value), value < 0, base, precision, width, flags);
           }
           else {
-            int v;
-            va_arg(va, v);
+            int v = va_arg!int(va);
             auto value = (flags & FLAGS_CHAR) ? cast(char)v : (flags & FLAGS_SHORT) ? cast(short)v : v;
             idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(uint)(value > 0 ? value : 0 - value), value < 0, base, precision, width, flags);
           }
@@ -747,19 +742,16 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
           // unsigned
           if (flags & FLAGS_LONG_LONG) {
 static if (PRINTF_SUPPORT_LONG_LONG) {
-            ulong value;
-            va_arg(va, value);
+            ulong value = va_arg!ulong(va);
             idx = _ntoa_long_long(out_fct, buffer, idx, maxlen, value, false, base, precision, width, flags);
 }
           }
           else if (flags & FLAGS_LONG) {
-            uint value;
-            va_arg(va, value);
+            uint value = va_arg!uint(va);
             idx = _ntoa_long(out_fct, buffer, idx, maxlen, value, false, base, precision, width, flags);
           }
           else {
-            uint v;
-            va_arg(va, v);
+            uint v = va_arg!uint(va);
             auto value = (flags & FLAGS_CHAR) ? cast(ubyte)v : (flags & FLAGS_SHORT) ? cast(ushort)v : v;
             idx = _ntoa_long(out_fct, buffer, idx, maxlen, value, false, base, precision, width, flags);
           }
@@ -771,8 +763,7 @@ static if (PRINTF_SUPPORT_FLOAT) {
       case 'f' :
       case 'F' :
         {if (*format == 'F') flags |= FLAGS_UPPERCASE;
-        double value;
-        va_arg(va, value);
+        double value = va_arg!double(va);
         idx = _ftoa(out_fct, buffer, idx, maxlen, value, precision, width, flags);
         format++;}
         break;
@@ -783,8 +774,7 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
       case 'G':
         if ((*format == 'g')||(*format == 'G')) flags |= FLAGS_ADAPT_EXP;
         if ((*format == 'E')||(*format == 'G')) flags |= FLAGS_UPPERCASE;
-        double v;
-        va_arg(va, v);
+        double v = va_arg!double(va);
         idx = _etoa(out_fct, buffer, idx, maxlen, v, precision, width, flags);
         format++;
         break;
@@ -799,8 +789,7 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
           }
         }
         // char output
-        int value;
-        va_arg(va, value);
+        int value = va_arg!int(va);
         out_fct(cast(char)value, buffer, idx++, maxlen);
         // post padding
         if (flags & FLAGS_LEFT) {
@@ -813,8 +802,7 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
       }
 
       case 's' : {
-        char* p;
-        va_arg(va, p);
+        char* p = va_arg!(char*)(va);
         uint l = _strnlen_s(p, precision ? precision : cast(size_t)-1);
         // pre padding
         if (flags & FLAGS_PRECISION) {
@@ -845,13 +833,11 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
         flags |= FLAGS_ZEROPAD | FLAGS_UPPERCASE;
         const bool is_ll = uintptr_t.sizeof == long.sizeof;
         if (is_ll) {
-          void* value;
-          va_arg(va, value);
+          void* value = va_arg!(void*)(va);
           idx = _ntoa_long_long(out_fct, buffer, idx, maxlen, cast(uintptr_t)value, false, 16U, precision, width, flags);
         }
         else {
-          void* value;
-          va_arg(va, value);
+          void* value = va_arg!(void*)(va);
           idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(uint)(cast(uintptr_t)value), false, 16U, precision, width, flags);
         }
         format++;
@@ -861,8 +847,7 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
       case 'p' : {
         width = (void*).sizeof * 2U;
         flags |= FLAGS_ZEROPAD | FLAGS_UPPERCASE;
-        void* value;
-        va_arg(va, value);
+        void* value = va_arg!(void*)(va);
         idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(uint)(cast(uintptr_t)value), false, 16U, precision, width, flags);
         format++;
         break;

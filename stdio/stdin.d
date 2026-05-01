@@ -10,7 +10,7 @@ extern(C):
 static __gshared ubyte[BUFSIZ+UNGET] stdin_buf;
 FILE __stdin_FILE = {
 	buf: cast(shared ubyte*)stdin_buf+UNGET,
-	buf_size: (&stdin_buf-UNGET).sizeof,
+	buf_size: BUFSIZ,
 	fd: 0,
 	flags: F_PERM | F_NOWR,
 	read: &__stdio_read,

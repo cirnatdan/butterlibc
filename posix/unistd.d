@@ -296,6 +296,19 @@ else version (Linux_Musl)
 	        return syscall(SYS.lseek, fd, offset, whence);
         }
     }
+    
+    // write implementation for Linux_Musl
+    ssize_t write(int fd, const scope void* buf, size_t count)
+    {
+        version(X86_64) {
+            return cast(ssize_t)syscall(SYS.write, fd, cast(long)buf, cast(long)count);
+        } else version(AArch64) {
+            return cast(ssize_t)syscall(SYS.write, fd, cast(long)buf, cast(long)count);
+        } else {
+            return -1;
+        }
+    }
+    
     alias ftruncate ftruncate64;
     alias lseek lseek64;
 }

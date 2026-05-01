@@ -121,96 +121,25 @@ version (LDC)
     private pragma(LDC_va_arg)
         T va_arg_intrinsic(T)(ref va_list ap);
 
-    T va_arg(T)(ref va_list ap)
-    {
-        version (SystemV_AMD64)
-        {
-            T arg;
-            va_arg(ap, arg);
-            return arg;
+    T va_arg(T)(va_list ap)
+    {   
+        // Manual implementation for BetterC mode
+        pragma(inline, true);
+        __va_list_tag* va = ap;
+        void* ptr;
+        
+        // Determine if we're using registers or stack
+        if (va.offset_regs < 6 * 8) {
+            // Use register arguments
+            ptr = cast(ubyte*)va.reg_args + va.offset_regs;
+            va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+        } else {
+            // Use stack arguments
+            ptr = va.stack_args;
+            va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
         }
-        else version (AAPCS64)
-        {
-            T arg;
-            va_arg(ap, arg);
-            return arg;
-        }
-        else version (Win64)
-        {
-            // dynamic arrays are passed as 2 separate 64-bit values
-            import std.traits: isDynamicArray;
-            static if (isDynamicArray!T)
-            {
-                auto length = *cast(size_t*)ap;
-                ap += size_t.sizeof;
-                auto ptr = *cast(typeof(T.init.ptr)*)ap;
-                ap += size_t.sizeof;
-                return ptr[0..length];
-            }
-            else
-            {
-                // passed as byval reference if > 64 bits or of a size that is not a power of 2
-                static if (T.sizeof > size_t.sizeof || (T.sizeof & (T.sizeof - 1)) != 0)
-                    T arg = **cast(T**)ap;
-                else
-                    T arg = *cast(T*)ap;
-                ap += size_t.sizeof;
-                return arg;
-            }
-        }
-        else version (X86)
-        {
-            T arg = *cast(T*)ap;
-            ap += (T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-            return arg;
-        }
-        else version (AArch64)
-        {
-            T arg = *cast(T*)ap;
-            ap += (T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-            return arg;
-        }
-        else version (ARM)
-        {
-            // AAPCS sec 5.5 B.5: type with alignment >= 8 is 8-byte aligned
-            // instead of normal 4-byte alignment (APCS doesn't do this).
-            version (AAPCS)
-            {
-                if (T.alignof >= 8)
-                    ap.ptr = cast(void*)((cast(size_t)ap.ptr + 7) & ~7);
-            }
-            T arg = *cast(T*)ap.ptr;
-            ap.ptr += (T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-            return arg;
-        }
-        else version (AnyPPC)
-        {
-            /*
-             * The rules are described in the 64bit PowerPC ELF ABI Supplement 1.9,
-             * available here:
-             * http://refspecs.linuxfoundation.org/ELF/ppc64/PPC-elf64abi-1.9.html#PARAM-PASS
-             */
-
-            // Chapter 3.1.4 and 3.2.3: Alignment may require the va_list pointer to first
-            // be aligned before accessing a value.
-            if (T.alignof >= 8)
-                ap = cast(va_list)((cast(size_t)ap + 7) & ~7);
-            version (BigEndian)
-                auto p = (T.sizeof < size_t.sizeof ? ap + (size_t.sizeof - T.sizeof) : ap);
-            version (LittleEndian)
-                auto p = ap;
-            T arg = *cast(T*)p;
-            ap += (T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-            return arg;
-        }
-        else version (AnyMIPS)
-        {
-            T arg = *cast(T*)ap;
-            ap += (T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-            return arg;
-        }
-        else
-            return va_arg_intrinsic!T(ap);
+        
+        return *cast(T*)ptr;
     }
 
     void va_arg(ref va_list ap, int param)
@@ -384,7 +313,8 @@ version (LDC)
 
     pragma(LDC_va_copy)
         void va_copy(out va_list dest, va_list src);
-} // version (LDC)
+
+    } // version (LDC)
 
 // LDC: we need a few non-Windows x86_64 helpers
 version (X86)
@@ -573,13 +503,49 @@ else version (X86_64)
     alias va_list = __va_list*;
 
     ///
-    void va_start(T)(out va_list ap, ref T parmn); // Compiler intrinsic
+    void va_start(T)(out va_list ap, ref T parmn) @nogc nothrow
+    {
+        // Initialize va_list to point to stack arguments after the last parameter
+        ap = cast(__va_list*)(cast(ubyte*)&parmn + T.sizeof);
+        ap.offset_regs = 6 * 8; // All registers used up
+        ap.offset_fpregs = 6 * 8 + 8 * 16;
+        ap.stack_args = cast(void*)ap;
+        ap.reg_args = null; // No register arguments available
+    }
 
     ///
     T va_arg(T)(va_list ap)
-    {   T a;
-        va_arg(ap, a);
-        return a;
+    {   
+        // Manual implementation for BetterC mode
+        pragma(inline, true);
+        __va_list_tag* va = ap;
+        void* ptr;
+        
+        // Determine if we're using registers or stack
+        if (va.offset_regs < 6 * 8) {
+            // Use register arguments
+            ptr = cast(ubyte*)va.reg_args + va.offset_regs;
+            va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+        } else {
+            // Use stack arguments
+            ptr = va.stack_args;
+            va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+        }
+        
+        return *cast(T*)ptr;
+    }
+
+    // Force template instantiation to match what printf expects
+    private void force_va_start_instantiation()
+    {
+        va_list ap;
+        char* format1;
+        const(char)* format2;
+        immutable(char)* format3;
+        
+        va_start!(char*)(ap, format1);
+        va_start!(const(char)*)(ap, format2);
+        va_start!(immutable(char)*)(ap, format3);
     }
   }
 
@@ -843,7 +809,33 @@ else version (X86_64)
     {
     }
 
-    import core.stdc.stdlib : alloca;
+    // Manual alloca implementation for BetterC compatibility
+pragma(inline, true)
+void* alloca(size_t size)
+{
+    void* result;
+    version (X86_64)
+    {
+        asm @nogc nothrow
+        {
+            mov RAX, RSP;     // Get current stack pointer
+            sub RAX, size;    // Allocate space on stack
+            and RAX, -16;     // Align to 16-byte boundary
+            mov result, RAX;
+        }
+    }
+    else version (AArch64)
+    {
+        asm @nogc nothrow
+        {
+            mov X0, SP;      // Get current stack pointer
+            sub X0, X0, size; // Allocate space on stack
+            and X0, X0, -16;  // Align to 16-byte boundary
+            mov result, X0;
+        }
+    }
+    return result;
+}
 
     ///
     void va_copy(out va_list dest, va_list src, void* storage = alloca(__va_list_tag.sizeof))

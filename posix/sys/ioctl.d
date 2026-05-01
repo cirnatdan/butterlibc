@@ -423,6 +423,32 @@ else version (Linux_Musl)
         ushort ws_xpixel;
         ushort ws_ypixel;
     }
+
+    // ioctl implementation following musl libc pattern with varargs
+    int ioctl(int __fd, c_ulong __request, ...)
+    {
+        import stdarg;
+        import sys.linux.syscalls;
+        
+        void* arg;
+        va_list ap;
+        va_start(ap, __request);
+        arg = va_arg(ap, void*);
+        va_end(ap);
+        
+        version (X86_64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else
+        {
+            return -1;
+        }
+    }
 }
 else version (CRuntime_UClibc)
 {
