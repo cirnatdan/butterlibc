@@ -128,15 +128,29 @@ version (LDC)
         __va_list_tag* va = ap;
         void* ptr;
         
-        // Determine if we're using registers or stack
-        if (va.offset_regs < 6 * 8) {
-            // Use register arguments
-            ptr = cast(ubyte*)va.reg_args + va.offset_regs;
-            va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+        // Check if T is a floating-point type
+        static if (__traits(isFloating, T)) {
+            // Floating-point type: use XMM register save area
+            if (va.offset_fpregs < 8 * 16) {
+                // Use XMM registers
+                ptr = cast(ubyte*)va.fpregs + va.offset_fpregs;
+                va.offset_fpregs += 16; // XMM slots are 16 bytes
+            } else {
+                // Use stack for FP arguments
+                ptr = va.stack_args;
+                va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            }
         } else {
-            // Use stack arguments
-            ptr = va.stack_args;
-            va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            // Integer type: use existing logic
+            if (va.offset_regs < 6 * 8 && va.reg_args !is null) {
+                // Use register arguments
+                ptr = cast(ubyte*)va.reg_args + va.offset_regs;
+                va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            } else {
+                // Use stack arguments
+                ptr = va.stack_args;
+                va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            }
         }
         
         return *cast(T*)ptr;
@@ -479,6 +493,7 @@ else version (X86_64)
         uint offset_fpregs = 6 * 8 + 8 * 16; // no fp regs
         void* stack_args;
         void* reg_args;
+        void* fpregs; // XMM0..XMM7 register save area
     }
 
     version (LDC)
