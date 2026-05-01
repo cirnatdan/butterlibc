@@ -82,7 +82,7 @@ version(AArch64)
 
 version(X86_64)
 {
-    enum _NSIG = 64;
+    enum _NSIG = 65;
 }
 
 version(Linux_Musl)
