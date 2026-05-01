@@ -43,5 +43,6 @@ all: libbutterc.so
 
 clean:
 	rm tests.exe || true
-	rm *.o */*.o || true
+	rm *.o */*.o */*/*.o || true
 	rm *.dylib || true
+	rm libbutterc.so || true
