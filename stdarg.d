@@ -821,6 +821,7 @@ void* alloca(size_t size)
             mov RAX, RSP;     // Get current stack pointer
             sub RAX, size;    // Allocate space on stack
             and RAX, -16;     // Align to 16-byte boundary
+            mov RSP, RAX;     // Update stack pointer
             mov result, RAX;
         }
     }
@@ -831,6 +832,7 @@ void* alloca(size_t size)
             mov X0, SP;      // Get current stack pointer
             sub X0, X0, size; // Allocate space on stack
             and X0, X0, -16;  // Align to 16-byte boundary
+            mov SP, X0;      // Update stack pointer
             mov result, X0;
         }
     }
