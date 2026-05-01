@@ -157,17 +157,6 @@ else version (CRuntime_UClibc)
     ssize_t readv(int, const scope iovec*, int);
     ssize_t writev(int, const scope iovec*, int);
 }
-else version (Linux_Musl)
-{
-    struct iovec
-    {
-        void*  iov_base;
-        size_t iov_len;
-    }
-
-    ssize_t readv(int, const scope iovec*, int);
-    ssize_t writev(int, const scope iovec*, int);
-}
 else
 {
     static assert(false, "Unsupported platform");
