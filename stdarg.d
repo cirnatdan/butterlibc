@@ -64,14 +64,6 @@ version (LDC)
     // the struct in LDC's va_start and va_copy intrinsics.
     version (SystemV_AMD64)
     {
-        // Layout of this struct must match __gnuc_va_list for C ABI compatibility
-        struct __va_list_tag
-        {
-            uint offset_regs = 6 * 8;            // no regs
-            uint offset_fpregs = 6 * 8 + 8 * 16; // no fp regs
-            void* stack_args;
-            void* reg_args;
-        }
         alias va_list = __va_list_tag*;
     }
     else version (AAPCS64)
@@ -550,21 +542,22 @@ else version (X86_64)
         enum isVectorType = true;
     }
 
-  version (LDC)
-  {
-    alias __va_list = __va_list_tag;
-  }
-  else
-  {
     // Layout of this struct must match __gnuc_va_list for C ABI compatibility
     struct __va_list_tag
     {
-        uint offset_regs = 6 * 8;            // no regs
+        uint offset_regs = 6 * 8; // no regs
         uint offset_fpregs = 6 * 8 + 8 * 16; // no fp regs
         void* stack_args;
         void* reg_args;
     }
-    alias __va_list = __va_list_tag;
+
+    version (LDC)
+    {
+        alias __va_list = __va_list_tag;
+    }
+    else
+    {
+        alias __va_list = __va_list_tag;
 
     align(16) struct __va_argsave_t
     {

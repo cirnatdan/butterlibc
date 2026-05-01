@@ -7,7 +7,9 @@ ARCH ?= X86_64
 AS ?= as
 CC ?= gcc
 LD ?= ld
+.if ${ARCH} == "X86_64"
 DMD_FLAGS ?= -m64
+.endif
 
 default: crt0.o
 	$(DMD) -fPIC -betterC -c -defaultlib= -conf= -version=$(VERSION) *.d -op -debug $(DMD_FLAGS)
