@@ -848,35 +848,9 @@ else version (X86_64)
     {
     }
 
-    // Manual alloca implementation for BetterC compatibility
-pragma(inline, true)
-void* alloca(size_t size)
-{
-    void* result;
-    version (X86_64)
-    {
-        asm @nogc nothrow
-        {
-            mov RAX, RSP;     // Get current stack pointer
-            sub RAX, size;    // Allocate space on stack
-            and RAX, -16;     // Align to 16-byte boundary
-            mov RSP, RAX;     // Update stack pointer
-            mov result, RAX;
-        }
-    }
-    else version (AArch64)
-    {
-        asm @nogc nothrow
-        {
-            mov X0, SP;      // Get current stack pointer
-            sub X0, X0, size; // Allocate space on stack
-            and X0, X0, -16;  // Align to 16-byte boundary
-            mov SP, X0;      // Update stack pointer
-            mov result, X0;
-        }
-    }
-    return result;
-}
+    // alloca must be a compiler builtin - stack pointer adjustments in a callee won't persist
+    // The compiler provides builtin_alloca, so we just declare the symbol here
+    extern(C) @nogc nothrow void* alloca(size_t size);
 
     ///
     void va_copy(out va_list dest, va_list src, void* storage = alloca(__va_list_tag.sizeof))
