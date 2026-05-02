@@ -40,12 +40,7 @@ else version (AArch64)
         ulong iovcnt_ul = cast(ulong)iovcnt;
         asm @nogc nothrow
         {
-            "mov X8, 66\n" ~
-            "mov X0, %1\n" ~
-            "mov X1, %2\n" ~
-            "mov X2, %3\n" ~
-            "svc #0\n" ~
-            "mov %0, X0\n"
+            "mov X8, 66; mov X0, %1; mov X1, %2; mov X2, %3; svc #0; mov %0, X0"
             : "=r"(result)
             : "r"(fd_ul), "r"(iov_ul), "r"(iovcnt_ul)
             : "x0", "x1", "x2", "x8", "memory";

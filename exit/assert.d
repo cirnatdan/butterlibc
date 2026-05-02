@@ -1,15 +1,8 @@
 extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const char* w)
 {
     version(AArch64) {
-        asm {
-            "mov X8, 64\n" ~
-            "mov X0, 2\n" ~
-            "mov X1, %0\n" ~
-            "mov X2, 10\n" ~
-            "svc #0\n" ~
-            "mov X8, 93\n" ~
-            "mov X0, 1\n" ~
-            "svc #0\n"
+        asm @nogc nothrow {
+            "mov X8, 64\nmov X0, 2\nmov X1, %0\nmov X2, 10\nsvc #0\nmov X8, 93\nmov X0, 1\nsvc #0\n"
             : : "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
@@ -33,25 +26,8 @@ extern (C) void __assert(const char* file, const char* x, uint line)
     version(AArch64) {
         // Simple implementation: just write a basic error message and exit
         // This avoids complex assembly with global variables for PIC compatibility
-        asm {
-            // Write "Assertion failed" message
-            "mov X8, 64\n" ~
-            "mov X0, 2\n" ~
-            "mov X1, %1\n" ~
-            "mov X2, 14\n" ~
-            "svc #0\n" ~
-            
-            // Write newline
-            "mov X8, 64\n" ~
-            "mov X0, 2\n" ~
-            "mov X1, %2\n" ~
-            "mov X2, 1\n" ~
-            "svc #0\n" ~
-            
-            // Terminate process
-            "mov X8, 93\n" ~
-            "mov X0, 1\n" ~
-            "svc #0\n"
+        asm @nogc nothrow {
+            "mov X8, 64; mov X0, 2; mov X1, %1; mov X2, 14; svc #0; mov X8, 64; mov X0, 2; mov X1, %2; mov X2, 1; svc #0; mov X8, 93; mov X0, 1; svc #0"
             : : "r"(file), "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
@@ -140,10 +116,8 @@ extern(C) void __assert_fail(const char* a, const char* b, uint c, const char* d
 {
     // Minimal implementation - just exit
     version(AArch64) {
-        asm {
-            "mov X8, 93\n" ~
-            "mov X0, 1\n" ~
-            "svc 0\n"
+        asm @nogc nothrow {
+            "mov X8, 93\nmov X0, 1\nsvc 0\n"
             : : : "x0", "x8", "memory";
         }
     } else {
