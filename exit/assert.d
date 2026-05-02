@@ -2,14 +2,14 @@ extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const 
 {
     version(AArch64) {
         asm {
-            "mov X8, 64\n\t" ~
-            "mov X0, 2\n\t" ~
-            "mov X1, %0\n\t" ~
-            "mov X2, 10\n\t" ~
-            "svc #0\n\t" ~
-            "mov X8, 93\n\t" ~
-            "mov X0, 1\n\t" ~
-            "svc #0\n\t"
+            "mov X8, 64\n" ~
+            "mov X0, 2\n" ~
+            "mov X1, %0\n" ~
+            "mov X2, 10\n" ~
+            "svc #0\n" ~
+            "mov X8, 93\n" ~
+            "mov X0, 1\n" ~
+            "svc #0\n"
             : : "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
@@ -35,23 +35,23 @@ extern (C) void __assert(const char* file, const char* x, uint line)
         // This avoids complex assembly with global variables for PIC compatibility
         asm {
             // Write "Assertion failed" message
-            "mov X8, 64\n\t" ~
-            "mov X0, 2\n\t" ~
-            "mov X1, %1\n\t" ~
-            "mov X2, 14\n\t" ~
-            "svc #0\n\t" ~
+            "mov X8, 64\n" ~
+            "mov X0, 2\n" ~
+            "mov X1, %1\n" ~
+            "mov X2, 14\n" ~
+            "svc #0\n" ~
             
             // Write newline
-            "mov X8, 64\n\t" ~
-            "mov X0, 2\n\t" ~
-            "mov X1, %2\n\t" ~
-            "mov X2, 1\n\t" ~
-            "svc #0\n\t" ~
+            "mov X8, 64\n" ~
+            "mov X0, 2\n" ~
+            "mov X1, %2\n" ~
+            "mov X2, 1\n" ~
+            "svc #0\n" ~
             
             // Terminate process
-            "mov X8, 93\n\t" ~
-            "mov X0, 1\n\t" ~
-            "svc #0\n\t"
+            "mov X8, 93\n" ~
+            "mov X0, 1\n" ~
+            "svc #0\n"
             : : "r"(file), "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
@@ -141,9 +141,9 @@ extern(C) void __assert_fail(const char* a, const char* b, uint c, const char* d
     // Minimal implementation - just exit
     version(AArch64) {
         asm {
-            "mov X8, 93\n\t" ~
-            "mov X0, 1\n\t" ~
-            "svc 0\n\t"
+            "mov X8, 93\n" ~
+            "mov X0, 1\n" ~
+            "svc 0\n"
             : : : "x0", "x8", "memory";
         }
     } else {
