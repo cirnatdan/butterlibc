@@ -888,8 +888,9 @@ extern(C) int printf(const char* format, ...)
 }
 
 
-int sprintf_(char* buffer, const char* format, va_list va)
+extern(C) int sprintf_(char* buffer, const char* format, ...)
 {
+  va_list va;
   va_start(va, format);
   const int ret = _vsnprintf(&_out_buffer, buffer, cast(size_t)-1, format, va);
   va_end(va);
@@ -897,8 +898,9 @@ int sprintf_(char* buffer, const char* format, va_list va)
 }
 
 
-int snprintf_(char* buffer, size_t count, const char* format, va_list va)
+extern(C) int snprintf_(char* buffer, size_t count, const char* format, ...)
 {
+  va_list va;
   va_start(va, format);
   const int ret = _vsnprintf(&_out_buffer, buffer, count, format, va);
   va_end(va);
@@ -906,10 +908,14 @@ int snprintf_(char* buffer, size_t count, const char* format, va_list va)
 }
 
 
-int vprintf_(const char* format, va_list va)
+extern(C) int vprintf_(const char* format, ...)
 {
+  va_list va;
+  va_start(va, format);
   char[1] buffer;
-  return _vsnprintf(&_out_char, cast(char*)buffer, cast(size_t)-1, format, va);
+  const int ret = _vsnprintf(&_out_char, cast(char*)buffer, cast(size_t)-1, format, va);
+  va_end(va);
+  return ret;
 }
 
 
