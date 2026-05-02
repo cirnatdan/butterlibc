@@ -908,13 +908,10 @@ extern(C) int snprintf_(char* buffer, size_t count, const char* format, ...)
 }
 
 
-extern(C) int vprintf_(const char* format, ...)
+extern(C) int vprintf_(const char* format, va_list args)
 {
-  va_list va;
-  va_start(va, format);
   char[1] buffer;
-  const int ret = _vsnprintf(&_out_char, cast(char*)buffer, cast(size_t)-1, format, va);
-  va_end(va);
+  const int ret = _vsnprintf(&_out_char, cast(char*)buffer, cast(size_t)-1, format, args);
   return ret;
 }
 
