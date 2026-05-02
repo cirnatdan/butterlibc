@@ -140,25 +140,25 @@ version (LDC)
             // Check if T is a floating-point type
             static if (__traits(isFloating, T)) {
                 // Floating-point type: use XMM register save area
-                if (va.offset_fpregs < 8 * 16) {
+                if (va.fp_offset < 8 * 16) {
                     // Use XMM registers
-                    ptr = cast(ubyte*)va.fpregs + va.offset_fpregs;
-                    va.offset_fpregs += 16; // XMM slots are 16 bytes
+                    ptr = cast(ubyte*)va.reg_save_area + va.fp_offset;
+                    va.fp_offset += 16; // XMM slots are 16 bytes
                 } else {
                     // Use stack for FP arguments
-                    ptr = va.stack_args;
-                    va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                    ptr = va.overflow_arg_area;
+                    va.overflow_arg_area = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
                 }
             } else {
                 // Integer type: use existing logic
-                if (va.offset_regs < 6 * 8 && va.reg_args !is null) {
+                if (va.gp_offset < 6 * 8 && va.reg_save_area !is null) {
                     // Use register arguments
-                    ptr = cast(ubyte*)va.reg_args + va.offset_regs;
-                    va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                    ptr = cast(ubyte*)va.reg_save_area + va.gp_offset;
+                    va.gp_offset += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
                 } else {
                     // Use stack arguments
-                    ptr = va.stack_args;
-                    va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                    ptr = va.overflow_arg_area;
+                    va.overflow_arg_area = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
                 }
             }
             
@@ -513,11 +513,10 @@ else version (X86_64)
     // Layout of this struct must match __gnuc_va_list for C ABI compatibility
     struct __va_list_tag
     {
-        uint offset_regs = 6 * 8; // no regs
-        uint offset_fpregs = 6 * 8 + 8 * 16; // no fp regs
-        void* stack_args;
-        void* reg_args;
-        void* fpregs; // XMM0..XMM7 register save area
+        uint gp_offset = 6 * 8; // no regs
+        uint fp_offset = 6 * 8 + 8 * 16; // no fp regs
+        void* overflow_arg_area;
+        void* reg_save_area;
     }
 
     version (LDC)
@@ -546,10 +545,10 @@ else version (X86_64)
     {
         // Initialize va_list to point to stack arguments after the last parameter
         ap = cast(__va_list*)(cast(ubyte*)&parmn + T.sizeof);
-        ap.offset_regs = 6 * 8; // All registers used up
-        ap.offset_fpregs = 6 * 8 + 8 * 16;
-        ap.stack_args = cast(void*)(cast(ubyte*)ap + __va_list_tag.sizeof);
-        ap.reg_args = null; // No register arguments available
+        ap.gp_offset = 6 * 8; // All registers used up
+        ap.fp_offset = 6 * 8 + 8 * 16;
+        ap.overflow_arg_area = cast(void*)(cast(ubyte*)ap + __va_list_tag.sizeof);
+        ap.reg_save_area = null; // No register arguments available
     }
 
     ///
@@ -561,14 +560,14 @@ else version (X86_64)
         void* ptr;
         
         // Determine if we're using registers or stack
-        if (va.offset_regs < 6 * 8) {
+        if (va.gp_offset < 6 * 8) {
             // Use register arguments
-            ptr = cast(ubyte*)va.reg_args + va.offset_regs;
-            va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            ptr = cast(ubyte*)va.reg_save_area + va.gp_offset;
+            va.gp_offset += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
         } else {
             // Use stack arguments
-            ptr = va.stack_args;
-            va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+            ptr = va.overflow_arg_area;
+            va.overflow_arg_area = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
         }
         
         return *cast(T*)ptr;
@@ -596,8 +595,8 @@ else version (X86_64)
             static if (U.length == 0 || T.sizeof > 16 || (U[0].sizeof > 8 && !isVectorType!(U[0])))
             {   // Always passed in memory
                 // The arg may have more strict alignment than the stack
-                auto p = (cast(size_t)ap.stack_args + T.alignof - 1) & ~(T.alignof - 1);
-                ap.stack_args = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                auto p = (cast(size_t)ap.overflow_arg_area + T.alignof - 1) & ~(T.alignof - 1);
+                ap.overflow_arg_area = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
                 parmn = *cast(T*)p;
             }
             else static if (U.length == 1)
@@ -605,28 +604,28 @@ else version (X86_64)
                 alias U[0] T1;
                 static if (is(T1 == double) || is(T1 == float) || isVectorType!(T1))
                 {   // Passed in XMM register
-                    if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    if (ap.fp_offset < (6 * 8 + 16 * 8))
                     {
-                        parmn = *cast(T*)(ap.reg_args + ap.offset_fpregs);
-                        ap.offset_fpregs += 16;
+                        parmn = *cast(T*)(ap.reg_save_area + ap.fp_offset);
+                        ap.fp_offset += 16;
                     }
                     else
                     {
-                        parmn = *cast(T*)ap.stack_args;
-                        ap.stack_args += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        parmn = *cast(T*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                     }
                 }
                 else
                 {   // Passed in regular register
-                    if (ap.offset_regs < 6 * 8 && T.sizeof <= 8)
+                    if (ap.gp_offset < 6 * 8 && T.sizeof <= 8)
                     {
-                        parmn = *cast(T*)(ap.reg_args + ap.offset_regs);
-                        ap.offset_regs += 8;
+                        parmn = *cast(T*)(ap.reg_save_area + ap.gp_offset);
+                        ap.gp_offset += 8;
                     }
                     else
                     {
-                        auto p = (cast(size_t)ap.stack_args + T.alignof - 1) & ~(T.alignof - 1);
-                        ap.stack_args = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                        auto p = (cast(size_t)ap.overflow_arg_area + T.alignof - 1) & ~(T.alignof - 1);
+                        ap.overflow_arg_area = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
                         parmn = *cast(T*)p;
                     }
                 }
@@ -642,37 +641,37 @@ else version (X86_64)
                 static if ((is(T1 == double) || is(T1 == float)) &&
                            (is(T2 == double) || is(T2 == float)))
                 {
-                    if (ap.offset_fpregs < (6 * 8 + 16 * 8) - 16)
+                    if (ap.fp_offset < (6 * 8 + 16 * 8) - 16)
                     {
-                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_fpregs);
-                        *cast(T2*)p = *cast(T2*)(ap.reg_args + ap.offset_fpregs + 16);
-                        ap.offset_fpregs += 32;
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_save_area + ap.fp_offset);
+                        *cast(T2*)p = *cast(T2*)(ap.reg_save_area + ap.fp_offset + 16);
+                        ap.fp_offset += 32;
                     }
                     else
                     {
-                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
-                        ap.stack_args += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-                        *cast(T2*)p = *cast(T2*)ap.stack_args;
-                        ap.stack_args += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        *cast(T1*)&parmn = *cast(T1*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        *cast(T2*)p = *cast(T2*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                     }
                 }
                 else static if (is(T1 == double) || is(T1 == float))
                 {
                     void* a = void;
-                    if (ap.offset_fpregs < (6 * 8 + 16 * 8) &&
-                        ap.offset_regs < 6 * 8 && T2.sizeof <= 8)
+                    if (ap.fp_offset < (6 * 8 + 16 * 8) &&
+                        ap.gp_offset < 6 * 8 && T2.sizeof <= 8)
                     {
-                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_fpregs);
-                        ap.offset_fpregs += 16;
-                        a = ap.reg_args + ap.offset_regs;
-                        ap.offset_regs += 8;
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_save_area + ap.fp_offset);
+                        ap.fp_offset += 16;
+                        a = ap.reg_save_area + ap.gp_offset;
+                        ap.gp_offset += 8;
                     }
                     else
                     {
-                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
-                        ap.stack_args += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-                        a = ap.stack_args;
-                        ap.stack_args += 8;
+                        *cast(T1*)&parmn = *cast(T1*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        a = ap.overflow_arg_area;
+                        ap.overflow_arg_area += 8;
                     }
                     // Be careful not to go past the size of the actual argument
                     const sz2 = T.sizeof - 8;
@@ -680,38 +679,38 @@ else version (X86_64)
                 }
                 else static if (is(T2 == double) || is(T2 == float))
                 {
-                    if (ap.offset_regs < 6 * 8 && T1.sizeof <= 8 &&
-                        ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    if (ap.gp_offset < 6 * 8 && T1.sizeof <= 8 &&
+                        ap.fp_offset < (6 * 8 + 16 * 8))
                     {
-                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_regs);
-                        ap.offset_regs += 8;
-                        *cast(T2*)p = *cast(T2*)(ap.reg_args + ap.offset_fpregs);
-                        ap.offset_fpregs += 16;
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_save_area + ap.gp_offset);
+                        ap.gp_offset += 8;
+                        *cast(T2*)p = *cast(T2*)(ap.reg_save_area + ap.fp_offset);
+                        ap.fp_offset += 16;
                     }
                     else
                     {
-                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
-                        ap.stack_args += 8;
-                        *cast(T2*)p = *cast(T2*)ap.stack_args;
-                        ap.stack_args += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        *cast(T1*)&parmn = *cast(T1*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += 8;
+                        *cast(T2*)p = *cast(T2*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                     }
                 }
                 else // both in regular registers
                 {
                     void* a = void;
-                    if (ap.offset_regs < 5 * 8 && T1.sizeof <= 8 && T2.sizeof <= 8)
+                    if (ap.gp_offset < 5 * 8 && T1.sizeof <= 8 && T2.sizeof <= 8)
                     {
-                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_regs);
-                        ap.offset_regs += 8;
-                        a = ap.reg_args + ap.offset_regs;
-                        ap.offset_regs += 8;
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_save_area + ap.gp_offset);
+                        ap.gp_offset += 8;
+                        a = ap.reg_save_area + ap.gp_offset;
+                        ap.gp_offset += 8;
                     }
                     else
                     {
-                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
-                        ap.stack_args += 8;
-                        a = ap.stack_args;
-                        ap.stack_args += 8;
+                        *cast(T1*)&parmn = *cast(T1*)ap.overflow_arg_area;
+                        ap.overflow_arg_area += 8;
+                        a = ap.overflow_arg_area;
+                        ap.overflow_arg_area += 8;
                     }
                     // Be careful not to go past the size of the actual argument
                     const sz2 = T.sizeof - 8;
@@ -746,34 +745,34 @@ else version (X86_64)
                 auto tsize = arg1.tsize;
                 void* p;
                 bool stack = false;
-                auto offset_fpregs_save = ap.offset_fpregs;
-                auto offset_regs_save = ap.offset_regs;
+                auto fp_offset_save = ap.fp_offset;
+                auto gp_offset_save = ap.gp_offset;
             L1:
                 if (inXMMregister(arg1) || v1)
                 {   // Passed in XMM register
-                    if (ap.offset_fpregs < (6 * 8 + 16 * 8) && !stack)
+                    if (ap.fp_offset < (6 * 8 + 16 * 8) && !stack)
                     {
-                        p = ap.reg_args + ap.offset_fpregs;
-                        ap.offset_fpregs += 16;
+                        p = ap.reg_save_area + ap.fp_offset;
+                        ap.fp_offset += 16;
                     }
                     else
                     {
-                        p = ap.stack_args;
-                        ap.stack_args += (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        p = ap.overflow_arg_area;
+                        ap.overflow_arg_area += (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                         stack = true;
                     }
                 }
                 else
                 {   // Passed in regular register
-                    if (ap.offset_regs < 6 * 8 && !stack)
+                    if (ap.gp_offset < 6 * 8 && !stack)
                     {
-                        p = ap.reg_args + ap.offset_regs;
-                        ap.offset_regs += 8;
+                        p = ap.reg_save_area + ap.gp_offset;
+                        ap.gp_offset += 8;
                     }
                     else
                     {
-                        p = ap.stack_args;
-                        ap.stack_args += 8;
+                        p = ap.overflow_arg_area;
+                        ap.overflow_arg_area += 8;
                         stack = true;
                     }
                 }
@@ -783,42 +782,42 @@ else version (X86_64)
                 {
                     if (inXMMregister(arg2))
                     {   // Passed in XMM register
-                        if (ap.offset_fpregs < (6 * 8 + 16 * 8) && !stack)
+                        if (ap.fp_offset < (6 * 8 + 16 * 8) && !stack)
                         {
-                            p = ap.reg_args + ap.offset_fpregs;
-                            ap.offset_fpregs += 16;
+                            p = ap.reg_save_area + ap.fp_offset;
+                            ap.fp_offset += 16;
                         }
                         else
                         {
                             if (!stack)
                             {   // arg1 is really on the stack, so rewind and redo
-                                ap.offset_fpregs = offset_fpregs_save;
-                                ap.offset_regs = offset_regs_save;
+                                ap.fp_offset = fp_offset_save;
+                                ap.gp_offset = gp_offset_save;
                                 stack = true;
                                 goto L1;
                             }
-                            p = ap.stack_args;
-                            ap.stack_args += (arg2.tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                            p = ap.overflow_arg_area;
+                            ap.overflow_arg_area += (arg2.tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                         }
                     }
                     else
                     {   // Passed in regular register
-                        if (ap.offset_regs < 6 * 8 && !stack)
+                        if (ap.gp_offset < 6 * 8 && !stack)
                         {
-                            p = ap.reg_args + ap.offset_regs;
-                            ap.offset_regs += 8;
+                            p = ap.reg_save_area + ap.gp_offset;
+                            ap.gp_offset += 8;
                         }
                         else
                         {
                             if (!stack)
                             {   // arg1 is really on the stack, so rewind and redo
-                                ap.offset_fpregs = offset_fpregs_save;
-                                ap.offset_regs = offset_regs_save;
+                                ap.fp_offset = fp_offset_save;
+                                ap.gp_offset = gp_offset_save;
                                 stack = true;
                                 goto L1;
                             }
-                            p = ap.stack_args;
-                            ap.stack_args += 8;
+                            p = ap.overflow_arg_area;
+                            ap.overflow_arg_area += 8;
                         }
                     }
                     auto sz = ti.tsize - 8;
@@ -830,8 +829,8 @@ else version (X86_64)
                 // The arg may have more strict alignment than the stack
                 auto talign = ti.talign;
                 auto tsize = ti.tsize;
-                auto p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1));
-                ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                auto p = cast(void*)((cast(size_t)ap.overflow_arg_area + talign - 1) & ~(talign - 1));
+                ap.overflow_arg_area = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
                 parmn[0..tsize] = p[0..tsize];
             }
         }
