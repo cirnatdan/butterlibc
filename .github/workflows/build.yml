@@ -16,8 +16,7 @@ jobs:
             dmd_binary: ldmd2
           - compiler: dmd
             dmd_binary: dmd
-        fail-fast: false
-
+        
     steps:
     - uses: actions/checkout@v4
     
