@@ -25,8 +25,6 @@ extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const 
     }
 }
 
-// Compatibility alias for __assert_fail (used by LDC)
-extern (C) alias __assert_fail = __assert;
 
 extern (C) void __assert(const char* file, const char* x, uint line)
 {
@@ -191,6 +189,25 @@ extern (C) void __assert(const char* file, const char* x, uint line)
         mov     RDI, 1;         // exit status 1 (failure)
         syscall;
 	    }
+    }
+}
+
+// Compatibility function for __assert_fail (used by LDC)
+extern(C) void __assert_fail(const char* a, const char* b, uint c, const char* d)
+{
+    // Minimal implementation - just exit
+    version(AArch64) {
+        asm {
+            mov X8, 93; // exit syscall
+            mov X0, 1;  // status 1
+            svc 0;
+        }
+    } else {
+        asm {
+            mov RAX, 60; // exit syscall
+            mov RDI, 1;  // status 1
+            syscall;
+        }
     }
 }
 
