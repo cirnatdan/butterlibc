@@ -925,8 +925,9 @@ int vsnprintf_(char* buffer, size_t count, const char* format, va_list va)
 }
 
 alias out_fct_hack = @nogc void function(char character, void* arg);
-int fctprintf(out_fct_hack out_fct, void* arg, const char* format, va_list va)
+extern(C) int fctprintf(out_fct_hack out_fct, void* arg, const char* format, ...)
 {
+  va_list va;
   va_start(va, format);
   const out_fct_wrap_type out_fct_wrap = { out_fct, arg };
   const int ret = _vsnprintf(&_out_fct, cast(char*)cast(uintptr_t)&out_fct_wrap, cast(size_t)-1, format, va);
