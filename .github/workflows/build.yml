@@ -28,7 +28,7 @@ jobs:
     - name: Install NetBSD bmake and cross-compilation tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y bmake gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+        sudo apt-get install -y bmake binutils gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
     
     - name: Build for ${{ matrix.arch }} with ${{ matrix.compiler }}
       run: |
