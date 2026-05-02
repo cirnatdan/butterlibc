@@ -3,10 +3,23 @@ VERSION ?= Linux_Musl
 OS = linux
 ARCH ?= X86_64
 
-# Cross-compiler tools (set via command line for AArch64)
+# Cross-compiler tools (automatically set for AArch64)
+.if ${ARCH} == "aarch64"
+AS = aarch64-linux-gnu-as
+CC = aarch64-linux-gnu-gcc
+LD = aarch64-linux-gnu-ld
+DMD_FLAGS = -mtriple=aarch64-linux-gnu
+.elif ${ARCH} == "AArch64"
+AS = aarch64-linux-gnu-as
+CC = aarch64-linux-gnu-gcc
+LD = aarch64-linux-gnu-ld
+DMD_FLAGS = -mtriple=aarch64-linux-gnu
+.else
 AS ?= as
 CC ?= gcc
 LD ?= ld
+DMD_FLAGS ?= -m64
+.endif
 
 # Compiler-specific flags
 .if ${DMD} == "dmd"
@@ -14,7 +27,7 @@ LD ?= ld
 DMD_FLAGS ?= -m64 -noboundscheck
 .else
 # LDC compiler (default)
-DMD_FLAGS ?= -m64
+# DMD_FLAGS is set above based on ARCH
 .endif
 
 default: crt0.o

@@ -2,14 +2,15 @@ extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const 
 {
     version(AArch64) {
         asm {
-            mov X8, 64;         // write syscall number
-            mov X0, 2;          // stderr fd
-            mov X1, x;          // message pointer
-            mov X2, 10;         // message length
-            svc #0;
-            mov X8, 93;         // exit syscall number
-            mov X0, 1;          // exit status 1 (failure)
-            svc #0;
+            "mov X8, 64\n\t" ~
+            "mov X0, 2\n\t" ~
+            "mov X1, %0\n\t" ~
+            "mov X2, 10\n\t" ~
+            "svc #0\n\t" ~
+            "mov X8, 93\n\t" ~
+            "mov X0, 1\n\t" ~
+            "svc #0\n\t"
+            : : "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
 	    asm {
@@ -30,86 +31,28 @@ extern (C) void __assert(const char* file, const char* x, uint line)
 {
     // Simple assert implementation for BetterC mode
     version(AArch64) {
+        // Simple implementation: just write a basic error message and exit
+        // This avoids complex assembly with global variables for PIC compatibility
         asm {
-            // Compute file string length
-            mov X1, file;       // file string pointer
-            mov X2, 0;          // length counter
-        length_loop_arm:
-            ldrb W3, [X1, X2];  // load byte
-            cbz W3, length_done_arm; // check for NUL
-            add X2, X2, 1;      // increment length
-            b length_loop_arm;
-        length_done_arm:
-            // Write file name
-            mov X8, 64;         // write syscall number
-            mov X0, 2;          // stderr fd
-            mov X1, file;       // file string pointer
-            svc #0;
+            // Write "Assertion failed" message
+            "mov X8, 64\n\t" ~
+            "mov X0, 2\n\t" ~
+            "mov X1, %1\n\t" ~
+            "mov X2, 14\n\t" ~
+            "svc #0\n\t" ~
             
-            // Write ": " separator
-            mov X8, 64;
-            mov X0, 2;
-            adrp X1, colon_space;
-            add X1, X1, :lo12:colon_space;
-            mov X2, 2;
-            svc #0;
-            
-            // Write expression string
-            mov X1, x;          // expression pointer
-            mov X2, 0;          // reset length counter
-        expr_loop_arm:
-            ldrb W3, [X1, X2];  // load byte
-            cbz W3, expr_done_arm; // check for NUL
-            add X2, X2, 1;      // increment length
-            b expr_loop_arm;
-        expr_done_arm:
-            mov X8, 64;
-            mov X0, 2;
-            mov X1, x;          // expression pointer
-            svc #0;
-            
-            // Write " at line " prefix
-            mov X8, 64;
-            mov X0, 2;
-            adrp X1, at_line_space;
-            add X1, X1, :lo12:at_line_space;
-            mov X2, 9;
-            svc #0;
-            
-            // Convert line number to string and write
-            mov X3, line;       // line number
-            mov X4, 10;         // base 10
-            adrp X5, line_buffer;
-            add X5, X5, :lo12:line_buffer;
-            add X5, X5, 10;     // end of buffer
-            mov W6, 10;         // newline character
-            strb W6, [X5];
-            sub X5, X5, 1;
-        itoa_loop_arm:
-            udiv X6, X3, X4;    // X6 = X3 / 10
-            msub X7, X6, X4, X3; // X7 = X3 - (X6 * 10) = remainder
-            add X7, X7, 48;     // convert to ASCII
-            strb W7, [X5];
-            sub X5, X5, 1;
-            mov X3, X6;
-            cbnz X3, itoa_loop_arm;
-            add X5, X5, 1;      // point to start of number
-            
-            // Calculate line number string length
-            adrp X6, line_buffer;
-            add X6, X6, :lo12:line_buffer;
-            add X6, X6, 11;     // end of buffer + newline
-            sub X2, X6, X5;
-            
-            mov X8, 64;
-            mov X0, 2;
-            mov X1, X5;         // line number string pointer
-            svc #0;
+            // Write newline
+            "mov X8, 64\n\t" ~
+            "mov X0, 2\n\t" ~
+            "mov X1, %2\n\t" ~
+            "mov X2, 1\n\t" ~
+            "svc #0\n\t" ~
             
             // Terminate process
-            mov X8, 93;         // exit syscall number
-            mov X0, 1;          // exit status 1 (failure)
-            svc #0;
+            "mov X8, 93\n\t" ~
+            "mov X0, 1\n\t" ~
+            "svc #0\n\t"
+            : : "r"(file), "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
 	    asm {
@@ -198,9 +141,10 @@ extern(C) void __assert_fail(const char* a, const char* b, uint c, const char* d
     // Minimal implementation - just exit
     version(AArch64) {
         asm {
-            mov X8, 93; // exit syscall
-            mov X0, 1;  // status 1
-            svc 0;
+            "mov X8, 93\n\t" ~
+            "mov X0, 1\n\t" ~
+            "svc 0\n\t"
+            : : : "x0", "x8", "memory";
         }
     } else {
         asm {

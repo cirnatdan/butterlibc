@@ -40,12 +40,15 @@ else version (AArch64)
         ulong iovcnt_ul = cast(ulong)iovcnt;
         asm @nogc nothrow
         {
-            mov X8, 66;          // writev syscall number for AArch64
-            mov X0, fd_ul;
-            mov X1, iov_ul;
-            mov X2, iovcnt_ul;
-            svc #0;
-            mov result, X0;
+            "mov X8, 66\n\t" ~
+            "mov X0, %1\n\t" ~
+            "mov X1, %2\n\t" ~
+            "mov X2, %3\n\t" ~
+            "svc #0\n\t" ~
+            "mov %0, X0\n\t"
+            : "=r"(result)
+            : "r"(fd_ul), "r"(iov_ul), "r"(iovcnt_ul)
+            : "x0", "x1", "x2", "x8", "memory";
         }
         return result;
     }

@@ -39,12 +39,18 @@ version (LDC)
     {
         void va_arg_aarch64(T)(ref __va_list ap, ref T parmn)
         {
-            assert(false, "Not yet implemented");
+            // AAPCS64 calling convention
+            // For now, use simple stack-based approach
+            parmn = *cast(T*)ap.__stack;
+            ap.__stack = cast(void*)((cast(size_t)ap.__stack + T.sizeof + 7) & ~7);
         }
 
         void va_arg_aarch64()(ref __va_list ap, TypeInfo ti, void* parmn)
         {
-            assert(false, "Not yet implemented");
+            auto tsize = ti.tsize;
+            auto p = ap.__stack;
+            ap.__stack = cast(void*)((cast(size_t)p + tsize + 7) & ~7);
+            parmn[0..tsize] = p[0..tsize];
         }
     }
 
@@ -125,35 +131,53 @@ version (LDC)
     {   
         // Manual implementation for BetterC mode
         pragma(inline, true);
-        __va_list_tag* va = ap;
-        void* ptr;
         
-        // Check if T is a floating-point type
-        static if (__traits(isFloating, T)) {
-            // Floating-point type: use XMM register save area
-            if (va.offset_fpregs < 8 * 16) {
-                // Use XMM registers
-                ptr = cast(ubyte*)va.fpregs + va.offset_fpregs;
-                va.offset_fpregs += 16; // XMM slots are 16 bytes
+        version (SystemV_AMD64)
+        {
+            __va_list_tag* va = ap;
+            void* ptr;
+            
+            // Check if T is a floating-point type
+            static if (__traits(isFloating, T)) {
+                // Floating-point type: use XMM register save area
+                if (va.offset_fpregs < 8 * 16) {
+                    // Use XMM registers
+                    ptr = cast(ubyte*)va.fpregs + va.offset_fpregs;
+                    va.offset_fpregs += 16; // XMM slots are 16 bytes
+                } else {
+                    // Use stack for FP arguments
+                    ptr = va.stack_args;
+                    va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                }
             } else {
-                // Use stack for FP arguments
-                ptr = va.stack_args;
-                va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                // Integer type: use existing logic
+                if (va.offset_regs < 6 * 8 && va.reg_args !is null) {
+                    // Use register arguments
+                    ptr = cast(ubyte*)va.reg_args + va.offset_regs;
+                    va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                } else {
+                    // Use stack arguments
+                    ptr = va.stack_args;
+                    va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
+                }
             }
-        } else {
-            // Integer type: use existing logic
-            if (va.offset_regs < 6 * 8 && va.reg_args !is null) {
-                // Use register arguments
-                ptr = cast(ubyte*)va.reg_args + va.offset_regs;
-                va.offset_regs += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
-            } else {
-                // Use stack arguments
-                ptr = va.stack_args;
-                va.stack_args = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
-            }
+            
+            return *cast(T*)ptr;
         }
-        
-        return *cast(T*)ptr;
+        else version (AAPCS64)
+        {
+            __va_list* va = &ap;
+            void* ptr = va.__stack;
+            va.__stack = cast(void*)((cast(size_t)ptr + T.sizeof + 7) & ~7);
+            return *cast(T*)ptr;
+        }
+        else
+        {
+            // Fallback for other architectures
+            void* ptr = ap;
+            ptr = cast(void*)((cast(size_t)ptr + T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1));
+            return *cast(T*)ptr;
+        }
     }
 
     void va_arg(ref va_list ap, int param)

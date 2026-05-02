@@ -778,12 +778,15 @@ extern(D) long __syscall(c_long n, long a, long b, long c)
     ulong c_ul = cast(ulong)c;
     asm @nogc nothrow
     {
-        mov X8, n_ul;
-        mov X0, a_ul;
-        mov X1, b_ul;
-        mov X2, c_ul;
-        svc #0;
-        mov result, X0;
+        "mov X8, %1\n\t" ~
+        "mov X0, %2\n\t" ~
+        "mov X1, %3\n\t" ~
+        "mov X2, %4\n\t" ~
+        "svc #0\n\t" ~
+        "mov %0, X0\n\t"
+        : "=r"(result)
+        : "r"(n_ul), "r"(a_ul), "r"(b_ul), "r"(c_ul)
+        : "x0", "x1", "x2", "x8", "memory";
     }
     return result;
 }
@@ -795,10 +798,13 @@ extern(D) long __syscall(c_long n, int a)
     ulong a_ul = cast(ulong)a;
     asm @nogc nothrow
     {
-        mov X8, n_ul;
-        mov X0, a_ul;
-        svc #0;
-        mov result, X0;
+        "mov X8, %1\n\t" ~
+        "mov X0, %2\n\t" ~
+        "svc #0\n\t" ~
+        "mov %0, X0\n\t"
+        : "=r"(result)
+        : "r"(n_ul), "r"(a_ul)
+        : "x0", "x8", "memory";
     }
     return result;
 }
