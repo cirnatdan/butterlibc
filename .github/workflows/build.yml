@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [ldc2, dmd]
+        compiler: [ldc, dmd]
         arch: [x86_64, aarch64]
         include:
-          - compiler: ldc2
+          - compiler: ldc
             dmd_binary: ldmd2
           - compiler: dmd
             dmd_binary: dmd
@@ -21,7 +21,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Install D compiler
-      uses: dlang-community/setup-dlang@v1
+      uses: dlang-community/setup-dlang@v2
       with:
         compiler: ${{ matrix.compiler }}
     
