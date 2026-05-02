@@ -52,6 +52,8 @@ test: default crt0.o
 	$(LD) -o tests.exe -static crt0.o stdio/printf.o string.o prng/rand.o stdarg.o exit/assert.o string/memcpy.o object.o posix/sys/writev.o tests/*.o #-macosx_version_min 10.7.0
 	./tests.exe
 
+.PHONY: all test clean
+
 all: libbutterc.so
 
 clean:
