@@ -10,69 +10,43 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [ldc, dmd]
         arch: [x86_64, aarch64]
         include:
-          - compiler: ldc
-            dmd_binary: ldmd2
-          - compiler: dmd
-            dmd_binary: dmd
-        
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
     - uses: actions/checkout@v4
     
     - name: Install D compiler
       uses: dlang-community/setup-dlang@v2
       with:
-        compiler: ${{ matrix.compiler }}
+        compiler: ldc
     
-    - name: Install NetBSD bmake and cross-compilation tools
+    - name: Install NetBSD bmake
       run: |
         sudo apt-get update
-        sudo apt-get install -y bmake binutils gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+        sudo apt-get install -y bmake
     
-    - name: Build for ${{ matrix.arch }} with ${{ matrix.compiler }}
+    - name: Build for ${{ matrix.arch }}
       run: |
-        if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=aarch64
-          export AS=aarch64-linux-gnu-as
-          export CC=aarch64-linux-gnu-gcc
-          export LD=aarch64-linux-gnu-ld
-        else
-          export ARCH=X86_64
-        fi
-        
-        export DMD=${{ matrix.dmd_binary }}
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
         bmake clean
         bmake default
     
-    - name: Run tests
+    - name: Run tests for ${{ matrix.arch }}
       run: |
-        if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=aarch64
-          export AS=aarch64-linux-gnu-as
-          export CC=aarch64-linux-gnu-gcc
-          export LD=aarch64-linux-gnu-ld
-        else
-          export ARCH=X86_64
-        fi
-        
-        export DMD=${{ matrix.dmd_binary }}
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
         bmake test
     
-    - name: Build shared library
+    - name: Build shared library for ${{ matrix.arch }}
       run: |
-        if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=aarch64
-          export AS=aarch64-linux-gnu-as
-          export CC=aarch64-linux-gnu-gcc
-          export LD=aarch64-linux-gnu-ld
-        else
-          export ARCH=X86_64
-        fi
-        
-        export DMD=${{ matrix.dmd_binary }}
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
         bmake libbutterc.so
