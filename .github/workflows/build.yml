@@ -37,7 +37,7 @@ jobs:
     - name: Build for ${{ matrix.arch }} with ${{ matrix.compiler }}
       run: |
         if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=AArch64
+          export ARCH=aarch64
           export AS=aarch64-linux-gnu-as
           export CC=aarch64-linux-gnu-gcc
           export LD=aarch64-linux-gnu-ld
@@ -52,7 +52,7 @@ jobs:
     - name: Run tests
       run: |
         if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=AArch64
+          export ARCH=aarch64
           export AS=aarch64-linux-gnu-as
           export CC=aarch64-linux-gnu-gcc
           export LD=aarch64-linux-gnu-ld
@@ -66,7 +66,7 @@ jobs:
     - name: Build shared library
       run: |
         if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          export ARCH=AArch64
+          export ARCH=aarch64
           export AS=aarch64-linux-gnu-as
           export CC=aarch64-linux-gnu-gcc
           export LD=aarch64-linux-gnu-ld
