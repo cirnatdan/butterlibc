@@ -12,9 +12,9 @@ jobs:
   build:
     strategy:
       matrix:
-        arch: [x86_64, aarch64]
+        arch: [X86_64, aarch64]
         include:
-          - arch: x86_64
+          - arch: X86_64
             runner: ubuntu-latest
           - arch: aarch64
             runner: ubuntu-22.04-arm
