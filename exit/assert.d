@@ -25,6 +25,9 @@ extern (C) void __assert_rtn(const char* x, const char* y, const char* z, const 
     }
 }
 
+// Compatibility alias for __assert_fail (used by LDC)
+extern (C) alias __assert_fail = __assert;
+
 extern (C) void __assert(const char* file, const char* x, uint line)
 {
     // Simple assert implementation for BetterC mode
