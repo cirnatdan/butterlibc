@@ -19,7 +19,10 @@ DMD_FLAGS ?= -m64
 # Compiler-specific flags
 .if ${DMD} == "dmd"
 # DMD compiler - avoid standard library imports with -betterC and disable bounds checking
-DMD_FLAGS += -m64 -noboundscheck
+.if ${ARCH} == "X86_64"
+DMD_FLAGS += -m64
+.endif
+DMD_FLAGS += -noboundscheck
 .else
 # LDC compiler (default)
 # DMD_FLAGS is set above based on ARCH
