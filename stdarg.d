@@ -44,13 +44,13 @@ version (LDC)
             if (__traits(isFloating, T) || T.sizeof > 16)
             {
                 // Floating-point/SIMD types use VR registers
-                if (ap.__vr_offs >= 0 && ap.__vr_offs < 8 * 16)
+                if (ap.__vr_offs < 0)
                 {
                     // Use VR register save area
                     auto reg_ptr = cast(ubyte*)ap.__vr_top + ap.__vr_offs;
                     parmn = *cast(T*)reg_ptr;
-                    // Advance VR offset by rounded size (16-byte alignment for SIMD)
-                    ap.__vr_offs = cast(int)(ap.__vr_offs + ((T.sizeof + 15) & ~15));
+                    // Advance VR offset toward zero
+                    ap.__vr_offs += cast(int)((T.sizeof + 15) & ~15);
                 }
                 else
                 {
@@ -62,13 +62,13 @@ version (LDC)
             else
             {
                 // Integer/GP types use GR registers
-                if (ap.__gr_offs >= 0 && ap.__gr_offs < 8 * 8)
+                if (ap.__gr_offs < 0)
                 {
                     // Use GR register save area
                     auto reg_ptr = cast(ubyte*)ap.__gr_top + ap.__gr_offs;
                     parmn = *cast(T*)reg_ptr;
-                    // Advance GR offset by rounded size (8-byte alignment)
-                    ap.__gr_offs = cast(int)(ap.__gr_offs + ((T.sizeof + 7) & ~7));
+                    // Advance GR offset toward zero
+                    ap.__gr_offs += cast(int)((T.sizeof + 7) & ~7);
                 }
                 else
                 {
