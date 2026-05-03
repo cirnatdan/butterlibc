@@ -820,12 +820,12 @@ extern (C) long syscall(c_long number, ...)
         va_start(args, number);
         
         // Extract up to 6 arguments
-        int a = va_arg!int(args);
-        int b = va_arg!int(args);
-        int c = va_arg!int(args);
-        int d = va_arg!int(args);
-        int e = va_arg!int(args);
-        int f = va_arg!int(args);
+        long a = va_arg!long(args);
+        long b = va_arg!long(args);
+        long c = va_arg!long(args);
+        long d = va_arg!long(args);
+        long e = va_arg!long(args);
+        long f = va_arg!long(args);
         
         va_end(args);
         
