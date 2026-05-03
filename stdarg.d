@@ -127,8 +127,8 @@ version (LDC)
     private pragma(LDC_va_arg)
         T va_arg_intrinsic(T)(ref va_list ap);
 
-    T va_arg(T)(va_list ap)
-    {   
+    T va_arg(T)(ref va_list ap)
+    {
         // Manual implementation for BetterC mode
         pragma(inline, true);
         
@@ -136,7 +136,7 @@ version (LDC)
         {
             __va_list_tag* va = ap;
             void* ptr;
-            
+
             // Check if T is a floating-point type
             static if (__traits(isFloating, T)) {
                 // Floating-point type: use XMM register save area
@@ -161,7 +161,7 @@ version (LDC)
                     va.overflow_arg_area = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
                 }
             }
-            
+
             return *cast(T*)ptr;
         }
         else version (AAPCS64)
@@ -175,7 +175,7 @@ version (LDC)
         {
             // Fallback for other architectures
             void* ptr = ap;
-            ptr = cast(void*)((cast(size_t)ptr + T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1));
+            ap = cast(va_list)((cast(size_t)ptr + T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1));
             return *cast(T*)ptr;
         }
     }
@@ -553,12 +553,12 @@ else version (X86_64)
 
     ///
     T va_arg(T)(va_list ap)
-    {   
+    {
         // Manual implementation for BetterC mode
         pragma(inline, true);
         __va_list_tag* va = ap;
         void* ptr;
-        
+
         // Determine if we're using registers or stack
         if (va.gp_offset < 6 * 8) {
             // Use register arguments
@@ -569,7 +569,7 @@ else version (X86_64)
             ptr = va.overflow_arg_area;
             va.overflow_arg_area = cast(ubyte*)ptr + ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
         }
-        
+
         return *cast(T*)ptr;
     }
 
@@ -580,7 +580,7 @@ else version (X86_64)
         char* format1;
         const(char)* format2;
         immutable(char)* format3;
-        
+
         va_start!(char*)(ap, format1);
         va_start!(const(char)*)(ap, format2);
         va_start!(immutable(char)*)(ap, format3);
