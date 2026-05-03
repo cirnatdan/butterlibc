@@ -251,7 +251,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)va.__vr_top + va.__vr_offs;
                     auto result = *cast(T*)reg_ptr;
                     // Advance VR offset by rounded size (16-byte alignment for SIMD)
-                    va.__vr_offs = (va.__vr_offs + ((T.sizeof + 15) & ~15));
+                    va.__vr_offs = cast(int)(va.__vr_offs + ((T.sizeof + 15) & ~15));
                     return result;
                 }
                 else
@@ -271,7 +271,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)va.__gr_top + va.__gr_offs;
                     auto result = *cast(T*)reg_ptr;
                     // Advance GR offset by rounded size (8-byte alignment)
-                    va.__gr_offs = (va.__gr_offs + ((T.sizeof + 7) & ~7));
+                    va.__gr_offs = cast(int)(va.__gr_offs + ((T.sizeof + 7) & ~7));
                     return result;
                 }
                 else
