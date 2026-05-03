@@ -13,15 +13,14 @@ DMD_FLAGS = -mtriple=aarch64-linux-gnu
 AS ?= as
 CC ?= gcc
 LD ?= ld
+.if ${ARCH} == "X86_64"
 DMD_FLAGS ?= -m64
+.endif
 .endif
 
 # Compiler-specific flags
 .if ${DMD} == "dmd"
 # DMD compiler - avoid standard library imports with -betterC and disable bounds checking
-.if ${ARCH} == "X86_64"
-DMD_FLAGS += -m64
-.endif
 DMD_FLAGS += -noboundscheck
 .else
 # LDC compiler (default)
