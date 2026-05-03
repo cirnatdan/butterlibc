@@ -730,7 +730,7 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
           }
           else if (flags & FLAGS_LONG) {
             long value = va_arg!long(va);
-            idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(uint)(value > 0 ? value : 0 - value), value < 0, base, precision, width, flags);
+            idx = _ntoa_long(out_fct, buffer, idx, maxlen, cast(ulong)(value > 0 ? value : 0 - value), value < 0, base, precision, width, flags);
           }
           else {
             int v = va_arg!int(va);
