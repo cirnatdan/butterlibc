@@ -9,11 +9,6 @@ AS = aarch64-linux-gnu-as
 CC = aarch64-linux-gnu-gcc
 LD = aarch64-linux-gnu-ld
 DMD_FLAGS = -mtriple=aarch64-linux-gnu
-.elif ${ARCH} == "AArch64"
-AS = aarch64-linux-gnu-as
-CC = aarch64-linux-gnu-gcc
-LD = aarch64-linux-gnu-ld
-DMD_FLAGS = -mtriple=aarch64-linux-gnu
 .else
 AS ?= as
 CC ?= gcc
@@ -24,7 +19,7 @@ DMD_FLAGS ?= -m64
 # Compiler-specific flags
 .if ${DMD} == "dmd"
 # DMD compiler - avoid standard library imports with -betterC and disable bounds checking
-DMD_FLAGS ?= -m64 -noboundscheck
+DMD_FLAGS += -m64 -noboundscheck
 .else
 # LDC compiler (default)
 # DMD_FLAGS is set above based on ARCH
