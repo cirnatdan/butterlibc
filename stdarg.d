@@ -50,7 +50,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)ap.__vr_top + ap.__vr_offs;
                     parmn = *cast(T*)reg_ptr;
                     // Advance VR offset by rounded size (16-byte alignment for SIMD)
-                    ap.__vr_offs = (ap.__vr_offs + ((T.sizeof + 15) & ~15));
+                    ap.__vr_offs = cast(int)(ap.__vr_offs + ((T.sizeof + 15) & ~15));
                 }
                 else
                 {
@@ -68,7 +68,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)ap.__gr_top + ap.__gr_offs;
                     parmn = *cast(T*)reg_ptr;
                     // Advance GR offset by rounded size (8-byte alignment)
-                    ap.__gr_offs = (ap.__gr_offs + ((T.sizeof + 7) & ~7));
+                    ap.__gr_offs = cast(int)(ap.__gr_offs + ((T.sizeof + 7) & ~7));
                 }
                 else
                 {
@@ -96,7 +96,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)ap.__vr_top + ap.__vr_offs;
                     parmn[0..tsize] = reg_ptr[0..tsize];
                     // Advance VR offset by rounded size (16-byte alignment for SIMD)
-                    ap.__vr_offs = (ap.__vr_offs + ((tsize + 15) & ~15));
+                    ap.__vr_offs = cast(int)(ap.__vr_offs + ((tsize + 15) & ~15));
                 }
                 else
                 {
@@ -115,7 +115,7 @@ version (LDC)
                     auto reg_ptr = cast(ubyte*)ap.__gr_top + ap.__gr_offs;
                     parmn[0..tsize] = reg_ptr[0..tsize];
                     // Advance GR offset by rounded size (8-byte alignment)
-                    ap.__gr_offs = (ap.__gr_offs + ((tsize + 7) & ~7));
+                    ap.__gr_offs = cast(int)(ap.__gr_offs + ((tsize + 7) & ~7));
                 }
                 else
                 {
