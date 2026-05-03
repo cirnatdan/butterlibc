@@ -433,7 +433,7 @@ else version (Linux_Musl)
         void* arg;
         va_list ap;
         va_start(ap, __request);
-        arg = va_arg(ap, void*);
+        arg = va_arg!(void*)(ap);
         va_end(ap);
         
         version (X86_64)
