@@ -671,9 +671,13 @@ else version (X86_64)
         __va_list_tag* va = ap;
         void* ptr;
 
-        // Determine if we're using registers or stack
-        if (va.gp_offset < 6 * 8) {
-            // Use register arguments
+        // Check if this is a floating-point type
+        if (__traits(isFloating, T) && va.fp_offset < 6 * 8 + 8 * 16) {
+            // Use FP register arguments (XMM registers)
+            ptr = cast(ubyte*)va.fp_save_area + va.fp_offset;
+            va.fp_offset += ((T.sizeof + 15) & ~15); // Align to 16-byte boundary
+        } else if (va.gp_offset < 6 * 8) {
+            // Use GP register arguments
             ptr = cast(ubyte*)va.reg_save_area + va.gp_offset;
             va.gp_offset += ((T.sizeof + 7) & ~7); // Align to 8-byte boundary
         } else {
