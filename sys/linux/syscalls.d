@@ -768,7 +768,7 @@ else version(AArch64)
         writev = 66,
     }
 
-    // DMD-compatible inline assembly for AArch64
+    // GDC/LDC-compatible inline assembly for AArch64 (GCC-style constraints)
 extern(D) long __syscall(c_long n, long a, long b, long c)
 {
     long result;
