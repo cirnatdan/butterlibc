@@ -814,12 +814,30 @@ extern (C) long syscall(c_long number, ...)
         // Arguments: number in rax, args in rdi, rsi, rdx, r10, r8, r9
         // Return value in rax
         long result;
+        
+        // Use stdarg to properly extract variadic arguments
+        va_list args;
+        va_start(args, number);
+        
+        // Extract up to 6 arguments
+        int a = va_arg!int(args);
+        int b = va_arg!int(args);
+        int c = va_arg!int(args);
+        int d = va_arg!int(args);
+        int e = va_arg!int(args);
+        int f = va_arg!int(args);
+        
+        va_end(args);
+        
         asm @nogc nothrow
         {
             mov RAX, number;
-            mov RDI, [RSP + 8];   // first vararg
-            mov RSI, [RSP + 16];  // second vararg  
-            mov RDX, [RSP + 24];  // third vararg
+            mov RDI, a;   // first argument
+            mov RSI, b;   // second argument
+            mov RDX, c;   // third argument
+            mov R10, d;   // fourth argument
+            mov R8, e;    // fifth argument
+            mov R9, f;    // sixth argument
             syscall;
             mov result, RAX;
         }
