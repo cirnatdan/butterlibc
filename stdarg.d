@@ -40,17 +40,91 @@ version (LDC)
         void va_arg_aarch64(T)(ref __va_list ap, ref T parmn)
         {
             // AAPCS64 calling convention
-            // For now, use simple stack-based approach
-            parmn = *cast(T*)ap.__stack;
-            ap.__stack = cast(void*)((cast(size_t)ap.__stack + T.sizeof + 7) & ~7);
+            // Check if we should use register save area or stack
+            if (__traits(isFloating, T) || T.sizeof > 16)
+            {
+                // Floating-point/SIMD types use VR registers
+                if (ap.__vr_offs >= 0 && ap.__vr_offs < 8 * 16)
+                {
+                    // Use VR register save area
+                    auto reg_ptr = cast(ubyte*)ap.__vr_top + ap.__vr_offs;
+                    parmn = *cast(T*)reg_ptr;
+                    // Advance VR offset by rounded size (16-byte alignment for SIMD)
+                    ap.__vr_offs = (ap.__vr_offs + ((T.sizeof + 15) & ~15));
+                }
+                else
+                {
+                    // Fall back to stack
+                    parmn = *cast(T*)ap.__stack;
+                    ap.__stack = cast(void*)((cast(size_t)ap.__stack + T.sizeof + 15) & ~15);
+                }
+            }
+            else
+            {
+                // Integer/GP types use GR registers
+                if (ap.__gr_offs >= 0 && ap.__gr_offs < 8 * 8)
+                {
+                    // Use GR register save area
+                    auto reg_ptr = cast(ubyte*)ap.__gr_top + ap.__gr_offs;
+                    parmn = *cast(T*)reg_ptr;
+                    // Advance GR offset by rounded size (8-byte alignment)
+                    ap.__gr_offs = (ap.__gr_offs + ((T.sizeof + 7) & ~7));
+                }
+                else
+                {
+                    // Fall back to stack
+                    parmn = *cast(T*)ap.__stack;
+                    ap.__stack = cast(void*)((cast(size_t)ap.__stack + T.sizeof + 7) & ~7);
+                }
+            }
         }
 
         void va_arg_aarch64()(ref __va_list ap, TypeInfo ti, void* parmn)
         {
             auto tsize = ti.tsize;
-            auto p = ap.__stack;
-            ap.__stack = cast(void*)((cast(size_t)p + tsize + 7) & ~7);
-            parmn[0..tsize] = p[0..tsize];
+            auto talign = ti.talign;
+            
+            // Determine if this is a floating-point/SIMD type
+            bool isFPType = (ti.flags & 2) != 0; // Check if FP/SIMD flag is set
+            
+            if (isFPType || tsize > 16)
+            {
+                // Floating-point/SIMD types use VR registers
+                if (ap.__vr_offs >= 0 && ap.__vr_offs < 8 * 16)
+                {
+                    // Use VR register save area
+                    auto reg_ptr = cast(ubyte*)ap.__vr_top + ap.__vr_offs;
+                    parmn[0..tsize] = reg_ptr[0..tsize];
+                    // Advance VR offset by rounded size (16-byte alignment for SIMD)
+                    ap.__vr_offs = (ap.__vr_offs + ((tsize + 15) & ~15));
+                }
+                else
+                {
+                    // Fall back to stack
+                    auto p = ap.__stack;
+                    ap.__stack = cast(void*)((cast(size_t)p + tsize + 15) & ~15);
+                    parmn[0..tsize] = p[0..tsize];
+                }
+            }
+            else
+            {
+                // Integer/GP types use GR registers
+                if (ap.__gr_offs >= 0 && ap.__gr_offs < 8 * 8)
+                {
+                    // Use GR register save area
+                    auto reg_ptr = cast(ubyte*)ap.__gr_top + ap.__gr_offs;
+                    parmn[0..tsize] = reg_ptr[0..tsize];
+                    // Advance GR offset by rounded size (8-byte alignment)
+                    ap.__gr_offs = (ap.__gr_offs + ((tsize + 7) & ~7));
+                }
+                else
+                {
+                    // Fall back to stack
+                    auto p = ap.__stack;
+                    ap.__stack = cast(void*)((cast(size_t)p + tsize + 7) & ~7);
+                    parmn[0..tsize] = p[0..tsize];
+                }
+            }
         }
     }
 
@@ -167,9 +241,47 @@ version (LDC)
         else version (AAPCS64)
         {
             __va_list* va = &ap;
-            void* ptr = va.__stack;
-            va.__stack = cast(void*)((cast(size_t)ptr + T.sizeof + 7) & ~7);
-            return *cast(T*)ptr;
+            
+            if (__traits(isFloating, T) || T.sizeof > 16)
+            {
+                // Floating-point/SIMD types use VR registers
+                if (va.__vr_offs >= 0 && va.__vr_offs < 8 * 16)
+                {
+                    // Use VR register save area
+                    auto reg_ptr = cast(ubyte*)va.__vr_top + va.__vr_offs;
+                    auto result = *cast(T*)reg_ptr;
+                    // Advance VR offset by rounded size (16-byte alignment for SIMD)
+                    va.__vr_offs = (va.__vr_offs + ((T.sizeof + 15) & ~15));
+                    return result;
+                }
+                else
+                {
+                    // Fall back to stack
+                    void* ptr = va.__stack;
+                    va.__stack = cast(void*)((cast(size_t)ptr + T.sizeof + 15) & ~15);
+                    return *cast(T*)ptr;
+                }
+            }
+            else
+            {
+                // Integer/GP types use GR registers
+                if (va.__gr_offs >= 0 && va.__gr_offs < 8 * 8)
+                {
+                    // Use GR register save area
+                    auto reg_ptr = cast(ubyte*)va.__gr_top + va.__gr_offs;
+                    auto result = *cast(T*)reg_ptr;
+                    // Advance GR offset by rounded size (8-byte alignment)
+                    va.__gr_offs = (va.__gr_offs + ((T.sizeof + 7) & ~7));
+                    return result;
+                }
+                else
+                {
+                    // Fall back to stack
+                    void* ptr = va.__stack;
+                    va.__stack = cast(void*)((cast(size_t)ptr + T.sizeof + 7) & ~7);
+                    return *cast(T*)ptr;
+                }
+            }
         }
         else
         {
