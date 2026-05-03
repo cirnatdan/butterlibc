@@ -803,6 +803,10 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
 
       case 's' : {
         char* p = va_arg!(char*)(va);
+        // Handle null pointer case
+        if (p is null) {
+          p = cast(char*)"(null)";
+        }
         uint l = _strnlen_s(p, precision ? precision : cast(size_t)-1);
         // pre padding
         if (flags & FLAGS_PRECISION) {
