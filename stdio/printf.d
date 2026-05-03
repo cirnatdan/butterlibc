@@ -747,7 +747,7 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
 }
           }
           else if (flags & FLAGS_LONG) {
-            uint value = va_arg!uint(va);
+            ulong value = va_arg!ulong(va);
             idx = _ntoa_long(out_fct, buffer, idx, maxlen, value, false, base, precision, width, flags);
           }
           else {
