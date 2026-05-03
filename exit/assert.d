@@ -27,7 +27,7 @@ extern (C) void __assert(const char* file, const char* x, uint line)
         // Simple implementation: just write a basic error message and exit
         // This avoids complex assembly with global variables for PIC compatibility
         asm @nogc nothrow {
-            "mov X8, 64; mov X0, 2; mov X1, %1; mov X2, 14; svc #0; mov X8, 64; mov X0, 2; mov X1, %2; mov X2, 1; svc #0; mov X8, 93; mov X0, 1; svc #0"
+            "mov X8, 64; mov X0, 2; mov X1, %0; mov X2, 14; svc #0; mov X8, 64; mov X0, 2; mov X1, %1; mov X2, 1; svc #0; mov X8, 93; mov X0, 1; svc #0"
             : : "r"(file), "r"(x) : "x0", "x1", "x2", "x8", "memory";
         }
     } else {
