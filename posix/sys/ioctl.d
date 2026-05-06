@@ -436,7 +436,11 @@ else version (Linux_Musl)
         arg = va_arg!(void*)(ap);
         va_end(ap);
         
-        version (X86_64) version (AArch64)
+        version (X86_64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
         {
             return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
         }
