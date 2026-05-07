@@ -42,7 +42,16 @@ crt0.o: crt/$(OS)/$(ARCH)/crt0.s
 	$(AS) -o crt0.o crt/$(OS)/$(ARCH)/crt0.s
 
 libbutterc.so: default crt0.o
-	$(LD) -o libbutterc.so */*/*.o */*.o *.o -shared
+	$(LD) -o libbutterc.so \
+	    *.o \
+	    exit/*.o \
+	    posix/*.o posix/sys/*.o \
+	    prng/*.o \
+	    stdio/*.o \
+	    stdlib/*.o \
+	    string/*.o \
+	    sys/linux/*.o \
+	    -shared
 
 test: default crt0.o
 	$(DMD) -betterC -c -version=$(VERSION) tests/tests.d -op -debug $(DMD_FLAGS)
