@@ -656,8 +656,8 @@ else version (X86_64)
     void va_start(T)(out va_list ap, ref T parmn) @nogc nothrow
     {
         // Initialize va_list to point to stack arguments after the last parameter
-        // Allocate __va_list_tag as a separate temporary, not embedded in caller's stack
-        __va_list_tag* va = new __va_list_tag();
+        // Allocate __va_list_tag on the stack using alloca to avoid heap allocation
+        __va_list_tag* va = cast(__va_list_tag*)alloca(__va_list_tag.sizeof);
         ap = va;
         ap.gp_offset = 6 * 8; // All registers used up
         ap.fp_offset = 6 * 8 + 8 * 16;
