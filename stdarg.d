@@ -214,7 +214,7 @@ version (LDC)
             // Check if T is a floating-point type
             static if (__traits(isFloating, T)) {
                 // Floating-point type: use XMM register save area
-                if (va.fp_offset < 8 * 16) {
+                if (va.fp_offset < (6 * 8 + 16 * 8)) {
                     // Use XMM registers
                     ptr = cast(ubyte*)va.reg_save_area + va.fp_offset;
                     va.fp_offset += 16; // XMM slots are 16 bytes
