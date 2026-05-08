@@ -245,7 +245,7 @@ version (LDC)
             if (__traits(isFloating, T) || T.sizeof > 16)
             {
                 // Floating-point/SIMD types use VR registers
-                if (va.__vr_offs >= 0 && va.__vr_offs < 8 * 16)
+                if (va.__vr_offs < 0 && va.__vr_offs > -8 * 16)
                 {
                     // Use VR register save area
                     auto reg_ptr = cast(ubyte*)va.__vr_top + va.__vr_offs;
@@ -265,7 +265,7 @@ version (LDC)
             else
             {
                 // Integer/GP types use GR registers
-                if (va.__gr_offs >= 0 && va.__gr_offs < 8 * 8)
+                if (va.__gr_offs < 0 && va.__gr_offs > -8 * 8)
                 {
                     // Use GR register save area
                     auto reg_ptr = cast(ubyte*)va.__gr_top + va.__gr_offs;
