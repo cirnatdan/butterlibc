@@ -289,12 +289,7 @@ else version (Linux_Musl)
     int ftruncate(int, off_t) @trusted;
     off_t lseek(int fd, off_t offset, int whence) @trusted
     {
-        version(x86_64) { // ???
-	        off_t result;
-	        return syscall(SYS._llseek, fd, offset>>32, offset, &result, whence) ? -1 : result;
-        } else {
-	        return syscall(SYS.lseek, fd, offset, whence);
-        }
+        return syscall(SYS.lseek, fd, offset, whence);
     }
     
     // write implementation for Linux_Musl
