@@ -45,12 +45,30 @@ void _putchar(char* character) {
         __asm(`svc     #0`,
          "{x0},{x1},{x2},{x8}", 1, character, 1, 64);
     } else version(X86_64) {
-        asm @nogc nothrow{
-            mov     RAX, 1;         // write syscall number
-            mov     RDI, 1;         // stdout fd
-            mov     RSI, character;
-            mov     RDX, 1;
-            syscall;
+        version(Linux) {
+            asm @nogc nothrow{
+                mov     RAX, 1;         // write syscall number (Linux)
+                mov     RDI, 1;         // stdout fd
+                mov     RSI, character;
+                mov     RDX, 1;
+                syscall;
+            }
+        } else version(Darwin) {
+            asm @nogc nothrow{
+                mov     RAX, 0x2000004; // write syscall number (macOS/Darwin)
+                mov     RDI, 1;         // stdout fd
+                mov     RSI, character;
+                mov     RDX, 1;
+                syscall;
+            }
+        } else {
+            asm @nogc nothrow{
+                mov     RAX, 1;         // write syscall number (default Linux)
+                mov     RDI, 1;         // stdout fd
+                mov     RSI, character;
+                mov     RDX, 1;
+                syscall;
+            }
         }
     }
 }
