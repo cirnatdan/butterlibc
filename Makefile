@@ -5,9 +5,9 @@ ARCH ?= X86_64
 
 # Cross-compiler tools (automatically set for AArch64)
 .if ${ARCH} == "aarch64"
-AS = aarch64-linux-gnu-as
-CC = aarch64-linux-gnu-gcc
-LD = aarch64-linux-gnu-ld
+AS ?= aarch64-linux-gnu-as
+CC ?= aarch64-linux-gnu-gcc
+LD ?= aarch64-linux-gnu-ld
 DMD_FLAGS = -mtriple=aarch64-linux-gnu
 .else
 AS ?= as
