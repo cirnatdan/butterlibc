@@ -1,6 +1,5 @@
 module sys.linux.syscalls;
 
-version (linux):
 extern (C):
 @system:
 nothrow:
@@ -8,7 +7,7 @@ nothrow:
 
 import config : c_long;
 import stdarg;
-import posix.sys.types : ssize_t;
+// import posix.sys.types : ssize_t; // Temporarily disabled due to platform support issues
 
 version (CoreDdoc)
 {
@@ -760,6 +759,7 @@ else version(AArch64)
     enum SYS : c_long
     {
         write = 64,
+        open = 56,
         ioctl = 29,
         close = 57,
         lseek = 62,
@@ -768,8 +768,8 @@ else version(AArch64)
         writev = 66,
     }
 
-    // GDC/LDC-compatible inline assembly for AArch64 (GCC-style constraints)
-extern(D) long __syscall(c_long n, long a, long b, long c)
+    // AArch64 syscall implementation with proper C linkage
+extern(C) long __syscall(c_long n, long a, long b, long c)
 {
     long result;
     ulong n_ul = cast(ulong)n;
@@ -786,7 +786,7 @@ extern(D) long __syscall(c_long n, long a, long b, long c)
     return result;
 }
 
-extern(D) long __syscall(c_long n, int a)
+extern(C) long __syscall2(c_long n, int a)
 {
     long result;
     ulong n_ul = cast(ulong)n;
@@ -800,6 +800,7 @@ extern(D) long __syscall(c_long n, int a)
     }
     return result;
 }
+
 }
 
 
@@ -845,35 +846,27 @@ extern (C) long syscall(c_long number, ...)
     }
     else version (AArch64)
     {
-        // For AArch64, delegate to the existing __syscall implementations
-        // Since we can't easily handle true variadic arguments in BetterC,
-        // we'll use a different approach: provide specific overloads
-        // and let the compiler choose the right one based on argument count
+        // For AArch64, we need to handle variadic arguments properly
+        // Since we can't use va_list in BetterC, we'll use a different approach
+        // We'll use the fact that the first 3 variadic arguments are passed in X1, X2, X3
+        // and extract them using inline assembly that reads from the stack frame
         
-        // For AArch64, system calls use the svc instruction
-        // Since we can't easily handle variadic arguments in BetterC,
-        // we implement a basic version that can handle common syscalls
+        long arg1, arg2, arg3;
         
-        // Note: For full variadic support, callers should use the specific
-        // __syscall functions directly (__syscall with 1, 2, or 3 args)
-        
-        // This implementation assumes 3 arguments which covers most common cases
-        // like write(fd, buf, count), read(fd, buf, count), etc.
-        long result;
-        ulong n_ul = cast(ulong)number;
-        
-        // Default arguments - in a real implementation you would extract
-        // variadic arguments properly using _argptr or similar
-        ulong arg1 = 0, arg2 = 0, arg3 = 0;
-        
+        // Extract arguments using inline assembly that reads from the correct locations
+        // On AArch64, variadic arguments are passed in registers x1, x2, x3 for the first 3 args
         asm @nogc nothrow
         {
-            "mov X8, %1\nmov X0, %2\nmov X1, %3\nmov X2, %4\nsvc #0\nmov %0, X0\n"
-            : "=r"(result)
-            : "r"(n_ul), "r"(arg1), "r"(arg2), "r"(arg3)
-            : "x0", "x1", "x2", "x8", "memory";
+            "mov %0, x1\n" ~
+            "mov %1, x2\n" ~
+            "mov %2, x3\n"
+            : "=r"(arg1), "=r"(arg2), "=r"(arg3)
+            :
+            : "memory";
         }
-        return result;
+        
+        // Forward to the appropriate __syscall function
+        return __syscall(number, arg1, arg2, arg3);
     }
     else
     {
