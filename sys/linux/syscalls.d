@@ -857,9 +857,7 @@ extern (C) long syscall(c_long number, ...)
         // On AArch64, variadic arguments are passed in registers x1, x2, x3 for the first 3 args
         asm @nogc nothrow
         {
-            "mov %0, x1\n" ~
-            "mov %1, x2\n" ~
-            "mov %2, x3\n"
+            "mov %0, X1\nmov %1, X2\nmov %2, X3\n"
             : "=r"(arg1), "=r"(arg2), "=r"(arg3)
             :
             : "memory";

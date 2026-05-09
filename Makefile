@@ -4,18 +4,21 @@ OS = linux
 ARCH ?= X86_64
 
 # Cross-compiler tools (automatically set for AArch64)
-.if ${ARCH} == "aarch64"
-AS ?= aarch64-linux-gnu-as
-CC ?= aarch64-linux-gnu-gcc
-LD ?= aarch64-linux-gnu-ld
-DMD_FLAGS = -mtriple=aarch64-linux-gnu
+.if ${ARCH} == aarch64
+AS := aarch64-linux-gnu-as
+CC := aarch64-linux-gnu-gcc
+LD := aarch64-linux-gnu-ld
 .else
 AS ?= as
 CC ?= gcc
 LD ?= ld
-.if ${ARCH} == "X86_64"
-DMD_FLAGS ?= -m64
 .endif
+
+# Set DMD flags based on architecture
+.if ${ARCH} == aarch64
+DMD_FLAGS = -mtriple=aarch64-linux-gnu
+.elif ${ARCH} == X86_64
+DMD_FLAGS ?= -m64
 .endif
 
 # Compiler-specific flags
@@ -39,10 +42,10 @@ default: crt0.o
 	$(DMD) -fPIC -betterC -c -version=$(VERSION) string/*.d -op -debug $(DMD_FLAGS)
 
 crt0.o: crt/$(OS)/$(ARCH)/crt0.s
-	$(AS) -o crt0.o crt/$(OS)/$(ARCH)/crt0.s
+	${AS} -o crt0.o crt/$(OS)/$(ARCH)/crt0.s
 
 libbutterc.so: default crt0.o
-	$(LD) -o libbutterc.so \
+	${LD} -o libbutterc.so \
 	    *.o \
 	    exit/*.o \
 	    posix/*.o posix/sys/*.o \

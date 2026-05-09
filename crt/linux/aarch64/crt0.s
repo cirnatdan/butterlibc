@@ -3,9 +3,9 @@
 .text
 
 _start:
-  bl main
+  b main
 
-  //exit
+  // exit
   mov x0, #0
   mov x8, #93
   svc #0
