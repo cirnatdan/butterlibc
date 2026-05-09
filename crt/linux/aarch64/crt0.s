@@ -3,7 +3,7 @@
 .text
 
 _start:
-  b main
+  bl main
 
   // exit
   mov x0, #0
