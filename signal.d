@@ -80,6 +80,11 @@ version(AArch64)
     enum _NSIG = 65;
 }
 
+version(X86_64)
+{
+    enum _NSIG = 65;
+}
+
 version(Linux_Musl)
 {
     int __libc_current_sigrtmax()

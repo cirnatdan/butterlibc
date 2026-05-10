@@ -289,13 +289,21 @@ else version (Linux_Musl)
     int ftruncate(int, off_t) @trusted;
     off_t lseek(int fd, off_t offset, int whence) @trusted
     {
-        version(x86_64) { // ???
-	        off_t result;
-	        return syscall(SYS._llseek, fd, offset>>32, offset, &result, whence) ? -1 : result;
+        return syscall(SYS.lseek, fd, offset, whence);
+    }
+    
+    // write implementation for Linux_Musl
+    ssize_t write(int fd, const scope void* buf, size_t count)
+    {
+        version(X86_64) {
+            return cast(ssize_t)syscall(SYS.write, fd, cast(long)buf, cast(long)count);
+        } else version(AArch64) {
+            return cast(ssize_t)syscall(SYS.write, fd, cast(long)buf, cast(long)count);
         } else {
-	        return syscall(SYS.lseek, fd, offset, whence);
+            return -1;
         }
     }
+    
     alias ftruncate ftruncate64;
     alias lseek lseek64;
 }

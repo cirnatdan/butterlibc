@@ -6,9 +6,9 @@ import stdio.__stdio_seek;
 import stdio.__stdio_close;
 
 extern(C):
-static __gshared ubyte[UNGET] buf;
+static __gshared ubyte[UNGET] stderr_buf;
 FILE __stderr_FILE = {
-	buf: cast(shared ubyte*)buf+UNGET,
+	buf: cast(shared ubyte*)stderr_buf,
 	buf_size: 0,
 	fd: 2,
 	flags: F_PERM | F_NORD,

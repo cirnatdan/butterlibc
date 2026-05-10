@@ -94,11 +94,7 @@ else
     int strerror_r(int errnum, scope char* buf, size_t buflen);
 }
 ///
-size_t strlen(scope const char* s) pure
-{
-    //stub
-    return 0;
-}
+size_t strlen(scope const char* s) pure;
 ///
 char*  strncat(return char* s1, scope const char* s2, size_t n) pure;
 ///

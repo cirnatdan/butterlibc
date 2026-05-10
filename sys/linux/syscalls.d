@@ -1,12 +1,13 @@
 module sys.linux.syscalls;
 
-version (linux):
 extern (C):
 @system:
 nothrow:
 @nogc:
 
 import config : c_long;
+import stdarg;
+// import posix.sys.types : ssize_t; // Temporarily disabled due to platform support issues
 
 version (CoreDdoc)
 {
@@ -742,11 +743,23 @@ else version (X86)
         statx = 383,
         arch_prctl = 384,
     }
+
+    extern(D) long __syscall(c_long n, long a, long b, long c)
+    {
+        return syscall(n, a, b, c);
+    }
+
+    extern(D) long __syscall(c_long n, int a)
+    {
+        return syscall(n, a);
+    }
 }
 else version(AArch64)
 {
     enum SYS : c_long
     {
+        write = 64,
+        open = 56,
         ioctl = 29,
         close = 57,
         lseek = 62,
@@ -755,18 +768,103 @@ else version(AArch64)
         writev = 66,
     }
 
-    import ldc.llvmasm;
-    extern(D) long __syscall(c_long n, long a, long b, long c)
+    // AArch64 syscall implementation with proper C linkage
+extern(C) long __syscall(c_long n, long a, long b, long c)
+{
+    long result;
+    ulong n_ul = cast(ulong)n;
+    ulong a_ul = cast(ulong)a;
+    ulong b_ul = cast(ulong)b;
+    ulong c_ul = cast(ulong)c;
+    asm @nogc nothrow
     {
-        return __asm!long(`svc     #0`,
-         "={x0},{x8},{x0},{x1},{x2}", n, a, b, c);
+        "mov X8, %1\nmov X0, %2\nmov X1, %3\nmov X2, %4\nsvc #0\nmov %0, X0\n"
+        : "=r"(result)
+        : "r"(n_ul), "r"(a_ul), "r"(b_ul), "r"(c_ul)
+        : "x0", "x1", "x2", "x8", "memory";
     }
+    return result;
+}
 
-    extern(D) long __syscall(c_long n, int a)
+extern(C) long __syscall2(c_long n, int a)
+{
+    long result;
+    ulong n_ul = cast(ulong)n;
+    ulong a_ul = cast(ulong)a;
+    asm @nogc nothrow
     {
-        return __asm!long(`svc     #0`,
-         "={x0},{x8},{x0}", n, a);
+        "mov X8, %1\nmov X0, %2\nsvc #0\nmov %0, X0\n"
+        : "=r"(result)
+        : "r"(n_ul), "r"(a_ul)
+        : "x0", "x8", "memory";
+    }
+    return result;
+}
+
+}
+
+
+
+
+// ABI-compatible variadic syscall function (matches musl/glibc interface)
+// Single unified implementation that handles variadic arguments safely
+extern (C) long syscall(c_long number, ...)
+{
+    va_list args;
+    va_start(args, number);
+    
+    // Extract up to 6 arguments using va_list
+    long a = va_arg!long(args);
+    long b = va_arg!long(args);
+    long c = va_arg!long(args);
+    long d = va_arg!long(args);
+    long e = va_arg!long(args);
+    long f = va_arg!long(args);
+    va_end(args);
+    
+    // Execute the syscall using inline assembly
+    // This is the actual implementation, not a wrapper
+    version (X86_64)
+    {
+        // X86_64: syscall instruction with arguments in specific registers
+        long result;
+        asm @nogc nothrow
+        {
+            mov RAX, number;
+            mov RDI, a;   // first argument
+            mov RSI, b;   // second argument
+            mov RDX, c;   // third argument
+            mov R10, d;   // fourth argument
+            mov R8, e;    // fifth argument
+            mov R9, f;    // sixth argument
+            syscall;
+            mov result, RAX;
+        }
+        return result;
+    }
+    else version (AArch64)
+    {
+        // AArch64: svc instruction with arguments in x0-x2
+        long result;
+        ulong n_ul = cast(ulong)number;
+        ulong a_ul = cast(ulong)a;
+        ulong b_ul = cast(ulong)b;
+        ulong c_ul = cast(ulong)c;
+        asm @nogc nothrow
+        {
+            "mov X8, %1\nmov X0, %2\nmov X1, %3\nmov X2, %4\nsvc #0\nmov %0, X0\n"
+            : "=r"(result)
+            : "r"(n_ul), "r"(a_ul), "r"(b_ul), "r"(c_ul)
+            : "x0", "x1", "x2", "x8", "memory";
+        }
+        return result;
+    }
+    else
+    {
+        // Fallback for other architectures - not implemented
+        return -1;
     }
 }
 
-alias __syscall syscall;
+
+

@@ -11,9 +11,22 @@ an operating system or userspace fully written in the D language.
 - printf() mostly works
 - rand() 
 
-## Platforms
+## Platforms (WIP)
 - Linux AArch64
+- Linux X86_64
 - Darwin x86_64
+
+## Building
+This project is built with **NetBSD make (bmake)**. Install it and run:
+```bash
+bmake
+```
+
+To build with a specific compiler:
+```bash
+bmake DMD=dmd      # DMD compiler
+bmake DMD=ldmd2    # LDC compiler (default)
+```
 
 ## Licensing
 Files imported from other projects are licensed under one of the `MIT`, `BSD`, 

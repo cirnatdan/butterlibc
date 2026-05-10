@@ -1,0 +1,52 @@
+name: Build Matrix
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        arch: [X86_64, aarch64]
+        include:
+          - arch: X86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install D compiler
+      uses: dlang-community/setup-dlang@v2
+      with:
+        compiler: ldc
+    
+    - name: Install NetBSD bmake
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bmake
+    
+    - name: Build for ${{ matrix.arch }}
+      run: |
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
+        bmake clean
+        bmake default
+    
+    - name: Run tests for ${{ matrix.arch }}
+      run: |
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
+        bmake test
+    
+    - name: Build shared library for ${{ matrix.arch }}
+      run: |
+        export ARCH=${{ matrix.arch }}
+        export DMD=ldmd2
+        bmake libbutterc.so

@@ -18,7 +18,7 @@ size_t __stdio_write(FILE *f, const ubyte *buf, size_t len)
 	int iovcnt = 2;
 	ssize_t cnt;
 	for (;;) {
-		cnt = syscall(SYS.writev, f.fd, cast(int)iov, iovcnt);
+		cnt = writev(f.fd, iov, iovcnt);
 		if (cnt == rem) {
 			f.wend = f.buf + f.buf_size;
 			f.wpos = f.wbase = f.buf;
