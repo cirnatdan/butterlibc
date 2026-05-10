@@ -806,30 +806,28 @@ extern(C) long __syscall2(c_long n, int a)
 
 
 
-// System call function for use by other modules
+// ABI-compatible variadic syscall function (matches musl/glibc interface)
+// Single unified implementation that handles variadic arguments safely
 extern (C) long syscall(c_long number, ...)
 {
+    va_list args;
+    va_start(args, number);
+    
+    // Extract up to 6 arguments using va_list
+    long a = va_arg!long(args);
+    long b = va_arg!long(args);
+    long c = va_arg!long(args);
+    long d = va_arg!long(args);
+    long e = va_arg!long(args);
+    long f = va_arg!long(args);
+    va_end(args);
+    
+    // Execute the syscall using inline assembly
+    // This is the actual implementation, not a wrapper
     version (X86_64)
     {
-        // For x86_64, system calls use the syscall instruction
-        // Arguments: number in rax, args in rdi, rsi, rdx, r10, r8, r9
-        // Return value in rax
+        // X86_64: syscall instruction with arguments in specific registers
         long result;
-        
-        // Use stdarg to properly extract variadic arguments
-        va_list args;
-        va_start(args, number);
-        
-        // Extract up to 6 arguments
-        long a = va_arg!long(args);
-        long b = va_arg!long(args);
-        long c = va_arg!long(args);
-        long d = va_arg!long(args);
-        long e = va_arg!long(args);
-        long f = va_arg!long(args);
-        
-        va_end(args);
-        
         asm @nogc nothrow
         {
             mov RAX, number;
@@ -846,25 +844,20 @@ extern (C) long syscall(c_long number, ...)
     }
     else version (AArch64)
     {
-        // For AArch64, we need to handle variadic arguments properly
-        // Since we can't use va_list in BetterC, we'll use a different approach
-        // We'll use the fact that the first 3 variadic arguments are passed in X1, X2, X3
-        // and extract them using inline assembly that reads from the stack frame
-        
-        long arg1, arg2, arg3;
-        
-        // Extract arguments using inline assembly that reads from the correct locations
-        // On AArch64, variadic arguments are passed in registers x1, x2, x3 for the first 3 args
+        // AArch64: svc instruction with arguments in x0-x2
+        long result;
+        ulong n_ul = cast(ulong)number;
+        ulong a_ul = cast(ulong)a;
+        ulong b_ul = cast(ulong)b;
+        ulong c_ul = cast(ulong)c;
         asm @nogc nothrow
         {
-            "mov %0, X1\nmov %1, X2\nmov %2, X3\n"
-            : "=r"(arg1), "=r"(arg2), "=r"(arg3)
-            :
-            : "memory";
+            "mov X8, %1\nmov X0, %2\nmov X1, %3\nmov X2, %4\nsvc #0\nmov %0, X0\n"
+            : "=r"(result)
+            : "r"(n_ul), "r"(a_ul), "r"(b_ul), "r"(c_ul)
+            : "x0", "x1", "x2", "x8", "memory";
         }
-        
-        // Forward to the appropriate __syscall function
-        return __syscall(number, arg1, arg2, arg3);
+        return result;
     }
     else
     {
@@ -872,4 +865,6 @@ extern (C) long syscall(c_long number, ...)
         return -1;
     }
 }
+
+
 
