@@ -3,6 +3,12 @@ VERSION ?= Linux_Musl
 OS = linux
 ARCH ?= X86_64
 
+# Installation settings
+PREFIX ?= /usr/local
+LIBDIR ?= $(PREFIX)/lib
+INCLUDEDIR ?= $(PREFIX)/include
+DESTDIR ?=
+
 # Cross-compiler tools (automatically set for AArch64)
 .if ${ARCH} == aarch64
 AS := aarch64-linux-gnu-as
@@ -61,7 +67,7 @@ test: default crt0.o
 	$(LD) -o tests.exe -static crt0.o stdio/printf.o string.o prng/rand.o stdarg.o exit/assert.o string/memcpy.o object.o posix/sys/writev.o tests/*.o #-macosx_version_min 10.7.0
 	./tests.exe
 
-.PHONY: all test clean
+.PHONY: all test clean install uninstall
 
 all: libbutterc.so
 
@@ -70,3 +76,13 @@ clean:
 	rm *.o */*.o */*/*.o || true
 	rm *.dylib || true
 	rm libbutterc.so || true
+
+install: libbutterc.so
+	mkdir -p "$(DESTDIR)$(LIBDIR)"
+	cp libbutterc.so "$(DESTDIR)$(LIBDIR)/"
+	@echo "Installed libbutterc.so to $(DESTDIR)$(LIBDIR)/"
+	@echo "Note: System-wide installation to /usr/local may require sudo"
+
+uninstall:
+	rm -f "$(DESTDIR)$(LIBDIR)/libbutterc.so"
+	@echo "Uninstalled libbutterc.so from $(DESTDIR)$(LIBDIR)/"
