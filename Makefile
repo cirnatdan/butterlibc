@@ -6,7 +6,6 @@ ARCH ?= X86_64
 # Installation settings
 PREFIX ?= /usr/local
 LIBDIR ?= $(PREFIX)/lib
-INCLUDEDIR ?= $(PREFIX)/include
 DESTDIR ?=
 
 # Cross-compiler tools (automatically set for AArch64)
