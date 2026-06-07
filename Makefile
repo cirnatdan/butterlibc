@@ -77,8 +77,8 @@ clean:
 	rm libbutterc.so || true
 
 install: libbutterc.so
-	mkdir -p "$(DESTDIR)$(LIBDIR)"
-	cp libbutterc.so "$(DESTDIR)$(LIBDIR)/"
+	install -d "$(DESTDIR)$(LIBDIR)"
+	install -m 755 libbutterc.so "$(DESTDIR)$(LIBDIR)/"
 	@echo "Installed libbutterc.so to $(DESTDIR)$(LIBDIR)/"
 	@echo "Note: System-wide installation to /usr/local may require sudo"
 
