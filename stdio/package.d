@@ -1217,12 +1217,6 @@ version (MinGW)
 else
 {
     ///
-    int fprintf(FILE* stream, scope const char* format, ...)
-    {
-        //stub
-        return 0;
-    }
-    ///
     int fscanf(FILE* stream, scope const char* format, ...);
     ///
     int sprintf(scope char* s, scope const char* format, ...);
@@ -1232,8 +1226,6 @@ else
         //stub
         return 0;
     }
-    ///
-    int vfprintf(FILE* stream, scope const char* format, va_list arg);
     ///
     int vfscanf(FILE* stream, scope const char* format, va_list arg);
     ///
@@ -1349,6 +1341,53 @@ version (Linux_Musl) { //musl
             return __overflow(f, cast(ubyte)c);
         }
     }
+
+    import stdarg;
+
+    extern (C):
+
+    // Import internal functions from printf.d
+    extern void _putchar(char* character);
+    extern int _vsnprintf(void function(char, void*, size_t, size_t), char*, size_t, const char*, va_list);
+
+    static void _out_char_fprintf(char character, void* buffer, size_t idx, size_t maxlen)
+    {
+        cast(void)buffer; cast(void)idx; cast(void)maxlen;
+        if (character) {
+            _putchar(&character);
+        }
+    }
+
+    /// fprintf for Linux_Musl - write formatted output to stream
+    int fprintf(FILE* stream, scope const char* format, ...)
+    {
+        va_list va;
+        va_start(va, format);
+        const int ret = vfprintf(stream, format, va);
+        va_end(va);
+        return ret;
+    }
+
+    /// vfprintf for Linux_Musl - write formatted output to stream with va_list
+    int vfprintf(FILE* stream, const char* format, va_list args)
+    {
+        char[1] buffer;
+        const int ret = _vsnprintf(&_out_char_fprintf, cast(char*)buffer, cast(size_t)-1, format, args);
+        return ret;
+    }
+
+    /// fputs for Linux_Musl - write a string to stream
+    int fputs(scope const char* s, FILE* stream)
+    {
+        if (!s) return -1;
+        size_t i = 0;
+        while (s[i]) {
+            char c = s[i];
+            _putchar(&c);
+            i++;
+        }
+        return 0;
+    }
 }
 //musl
 static wint_t __fgetwc_unlocked_internal(FILE *f)
@@ -1410,12 +1449,6 @@ wint_t fgetwc(FILE* fp)
 
 ///
 char* fgets(char* s, int n, FILE* stream);
-///
-int   fputs(scope const char* s, FILE* stream)
-{
-    //stub
-    return 0;
-}
 ///
 char* gets(char* s);
 ///

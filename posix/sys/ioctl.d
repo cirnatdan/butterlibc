@@ -425,7 +425,7 @@ else version (Linux_Musl)
     }
 
     // ioctl implementation following musl libc pattern with varargs
-    int ioctl(int __fd, c_ulong __request, ...)
+    extern(C) int ioctl(int __fd, c_ulong __request, ...)
     {
         import stdarg;
         import sys.linux.syscalls;
@@ -778,5 +778,34 @@ else version (CRuntime_UClibc)
 else
 {
     static assert(false, "Unsupported platform");
+}
+
+// Linux_Musl specific implementation of ioctl
+version (Linux_Musl)
+{
+    import stdarg;
+    import sys.linux.syscalls;
+
+    extern(C) int ioctl(int __fd, c_ulong __request, ...)
+    {
+        void* arg;
+        va_list ap;
+        va_start(ap, __request);
+        arg = va_arg!(void*)(ap);
+        va_end(ap);
+
+        version (X86_64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else
+        {
+            return -1;
+        }
+    }
 }
 
