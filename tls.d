@@ -33,13 +33,8 @@ private void* thread_pointer() nothrow @nogc
     }
     else version (AArch64)
     {
-        void* tp;
-        asm nothrow @nogc
-        {
-            mrs x0, tpidr_el0;
-            mov tp, x0;
-        }
-        return tp;
+        import ldc.llvmasm;
+        return __asm!(void*)("mrs $0, tpidr_el0", "=r");
     }
     else
     {
