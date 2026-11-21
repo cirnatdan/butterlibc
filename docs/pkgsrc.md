@@ -8,7 +8,7 @@ butterlibc is a small, portable C library implementation. This document explains
 
 ## Prerequisites
 
-1. butterlibc built (using `bmake` in the butterlibc directory)
+1. butterlibc built (using `bmake all` or `bmake libbutterc.so` in the butterlibc directory, so that both `libbutterc.so` and `crt0.o` exist)
 2. pkgsrc bootstrapped on your system (typically at `/opt/pkg/src`)
 3. Musl libc headers installed (for Linux builds, typically at `/usr/include/x86_64-linux-musl`)
 
@@ -46,12 +46,19 @@ Create a `buttercc` script that wraps the system compiler. Example:
 ```sh
 #!/bin/sh
 # buttercc - Compiler wrapper for butterlibc
-BUTTERLIBC_DIR="/home/dan/Projects/butterlibc"
+# Resolve the butterlibc directory from this script's own location, and put
+# -lbutterc after the caller's object files so --as-needed linkers keep it.
+BUTTERLIBC_DIR=${BUTTERLIBC_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
+MUSL_INCLUDE_DIR=${MUSL_INCLUDE_DIR:-/usr/include/x86_64-linux-musl}
 exec cc -nostdlib "${BUTTERLIBC_DIR}/crt0.o" \
-    -I/usr/include/x86_64-linux-musl \
-    -fno-stack-protector -ffreestanding -fno-builtin \
-    -L"${BUTTERLIBC_DIR}" -lbutterc "$@"
+    -I"${MUSL_INCLUDE_DIR}" \
+    "$@" -fno-stack-protector -ffreestanding -fno-builtin \
+    -L"${BUTTERLIBC_DIR}" -lbutterc
 ```
+
+Notes:
+- The hardening flags come *after* the caller's arguments so they win over default flags like `-fstack-protector-strong`.
+- `-lbutterc` comes after the caller's object files so `--as-needed` linkers retain the library.
 
 Install it to a directory in your PATH (e.g., `${BUTTERLIBC_DIR}/buttercc`) and make it executable.
 

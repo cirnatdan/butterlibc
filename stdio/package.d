@@ -1350,11 +1350,12 @@ version (Linux_Musl) { //musl
     extern void _putchar(char* character);
     extern int _vsnprintf(void function(char, void*, size_t, size_t), char*, size_t, const char*, va_list);
 
+    // Format into a buffer (leaving room for the terminator) so that NUL
+    // bytes produced by %c are preserved and the terminator is not emitted.
     static void _out_char_fprintf(char character, void* buffer, size_t idx, size_t maxlen)
     {
-        cast(void)buffer; cast(void)idx; cast(void)maxlen;
-        if (character) {
-            _putchar(&character);
+        if (idx + 1 < maxlen) {
+            (cast(char*)buffer)[idx] = character;
         }
     }
 
@@ -1371,20 +1372,34 @@ version (Linux_Musl) { //musl
     /// vfprintf for Linux_Musl - write formatted output to stream with va_list
     int vfprintf(FILE* stream, const char* format, va_list args)
     {
-        char[1] buffer;
-        const int ret = _vsnprintf(&_out_char_fprintf, cast(char*)buffer, cast(size_t)-1, format, args);
+        char[4096] buffer;
+        const int ret = _vsnprintf(&_out_char_fprintf, buffer.ptr, buffer.length, format, args);
+        if (ret < 0) {
+            auto pflags = cast(uint*)&stream.flags;
+            *pflags = *pflags | F_ERR;
+            return ret;
+        }
+        size_t to_write = cast(size_t)ret;
+        if (to_write > buffer.length - 1)
+            to_write = buffer.length - 1;
+        if (to_write > 0 && stream.write(stream, cast(const(ubyte*))buffer.ptr, to_write) != to_write) {
+            auto pflags = cast(uint*)&stream.flags;
+            *pflags = *pflags | F_ERR;
+            return -1;
+        }
         return ret;
     }
 
     /// fputs for Linux_Musl - write a string to stream
     int fputs(scope const char* s, FILE* stream)
     {
-        if (!s) return -1;
-        size_t i = 0;
-        while (s[i]) {
-            char c = s[i];
-            _putchar(&c);
-            i++;
+        if (!s) return EOF;
+        size_t len = 0;
+        while (s[len]) len++;
+        if (len > 0 && stream.write(stream, cast(const(ubyte*))s, len) != len) {
+            auto pflags = cast(uint*)&stream.flags;
+            *pflags = *pflags | F_ERR;
+            return EOF;
         }
         return 0;
     }

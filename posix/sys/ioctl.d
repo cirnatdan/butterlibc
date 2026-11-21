@@ -32,7 +32,49 @@ version (Posix):
 extern (C) nothrow @nogc:
 @system:
 
-version (CRuntime_Glibc)
+version (Linux_Musl)
+{
+    // Checked before CRuntime_Glibc because musl-targeted builds define both,
+    // and this branch must win so its ioctl implementation is the sole definition.
+    import posix.termios;
+    import stdarg;
+    import sys.linux.syscalls;
+
+    enum TIOCGWINSZ = 0x5413;
+    enum TIOCSWINSZ = 0x5414;
+
+    struct winsize
+    {
+        ushort ws_row;
+        ushort ws_col;
+        ushort ws_xpixel;
+        ushort ws_ypixel;
+    }
+
+    // ioctl implementation following musl libc pattern with varargs
+    extern(C) int ioctl(int __fd, c_ulong __request, ...)
+    {
+        void* arg;
+        va_list ap;
+        va_start(ap, __request);
+        arg = va_arg!(void*)(ap);
+        va_end(ap);
+
+        version (X86_64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
+        {
+            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else
+        {
+            return -1;
+        }
+    }
+}
+else version (CRuntime_Glibc)
 {
     import posix.termios; // tcflag_t, speed_t, cc_t
 
@@ -412,44 +454,6 @@ else version (CRuntime_Bionic)
 {
     int ioctl(int, int, ...);
 }
-else version (Linux_Musl)
-{
-    import posix.termios;
-
-    struct winsize
-    {
-        ushort ws_row;
-        ushort ws_col;
-        ushort ws_xpixel;
-        ushort ws_ypixel;
-    }
-
-    // ioctl implementation following musl libc pattern with varargs
-    extern(C) int ioctl(int __fd, c_ulong __request, ...)
-    {
-        import stdarg;
-        import sys.linux.syscalls;
-        
-        void* arg;
-        va_list ap;
-        va_start(ap, __request);
-        arg = va_arg!(void*)(ap);
-        va_end(ap);
-        
-        version (X86_64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else version (AArch64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else
-        {
-            return -1;
-        }
-    }
-}
 else version (CRuntime_UClibc)
 {
     import core.sys.posix.termios;
@@ -778,34 +782,5 @@ else version (CRuntime_UClibc)
 else
 {
     static assert(false, "Unsupported platform");
-}
-
-// Linux_Musl specific implementation of ioctl
-version (Linux_Musl)
-{
-    import stdarg;
-    import sys.linux.syscalls;
-
-    extern(C) int ioctl(int __fd, c_ulong __request, ...)
-    {
-        void* arg;
-        va_list ap;
-        va_start(ap, __request);
-        arg = va_arg!(void*)(ap);
-        va_end(ap);
-
-        version (X86_64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else version (AArch64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else
-        {
-            return -1;
-        }
-    }
 }
 

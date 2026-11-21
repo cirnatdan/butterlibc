@@ -1,6 +1,11 @@
 #!/bin/sh
 # buttercc - Compiler wrapper for butterlibc
-exec cc -nostdlib /home/dan/Projects/butterlibc/crt0.o \
-    -I/usr/include/x86_64-linux-musl \
-    -fno-stack-protector -ffreestanding -fno-builtin \
-    -L/home/dan/Projects/butterlibc -lbutterc "$@"
+# Resolve the butterlibc directory from this script's own location so the
+# wrapper works from any checkout, and put -lbutterc after the caller's
+# object files so --as-needed linkers retain the library.
+BUTTERLIBC_DIR=${BUTTERLIBC_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
+MUSL_INCLUDE_DIR=${MUSL_INCLUDE_DIR:-/usr/include/x86_64-linux-musl}
+exec cc -nostdlib "${BUTTERLIBC_DIR}/crt0.o" \
+    -I"${MUSL_INCLUDE_DIR}" \
+    "$@" -fno-stack-protector -ffreestanding -fno-builtin \
+    -L"${BUTTERLIBC_DIR}" -lbutterc
