@@ -58,7 +58,8 @@ nothrow:
 
 // Generic declarations at module scope so every configuration exposes
 // these names; per-platform definitions follow in the version blocks below.
-// (Excluded for MinGW, which aliases these names to __mingw_* functions.)
+int fputs(scope const char* s, FILE* stream);
+// (fprintf/vfprintf excluded for MinGW, which aliases them to __mingw_*.)
 version (MinGW)
 {
 }
@@ -66,7 +67,6 @@ else
 {
     int fprintf(FILE* stream, scope const char* format, ...);
     int vfprintf(FILE* stream, const char* format, va_list args);
-    int fputs(scope const char* s, FILE* stream);
 }
 
 version (CRuntime_DigitalMars)
@@ -1380,15 +1380,13 @@ version (Linux_Musl) { //musl
     // (index < ret) are preserved.
     static void _vfprintf_flush(_vfprintf_state* st, size_t count)
     {
-        size_t done = 0;
-        while (done < count) {
-            size_t n = st.stream.write(st.stream,
-                cast(const(ubyte*))st.buf.ptr + done, count - done);
-            if (n == 0) {
-                st.failed = true;
-                return;
-            }
-            done += n;
+        // A write callback that returns less than requested (including 0)
+        // signals an output error rather than a partial write to retry.
+        size_t n = st.stream.write(st.stream,
+            cast(const(ubyte*))st.buf.ptr, count);
+        if (n != count) {
+            st.failed = true;
+            return;
         }
         st.written += count;
     }
@@ -1417,6 +1415,8 @@ version (Linux_Musl) { //musl
     }
 
     /// vfprintf for Linux_Musl - write formatted output to stream with va_list
+    /// Note: like the rest of butterlibc, this is not thread-safe; concurrent
+    /// calls on the same FILE are not serialized (no stream locking yet).
     int vfprintf(FILE* stream, const char* format, va_list args)
     {
         if (stream is null || stream.write is null || (stream.flags & F_NOWR)) {

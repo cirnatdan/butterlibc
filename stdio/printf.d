@@ -894,13 +894,13 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
           long* p = va_arg!(long*)(va);
           if (p !is null) *p = cast(long)idx;
         }
-        else if (flags & FLAGS_SHORT) {
-          short* p = va_arg!(short*)(va);
-          if (p !is null) *p = cast(short)idx;
-        }
         else if (flags & FLAGS_CHAR) {
           char* p = va_arg!(char*)(va);
           if (p !is null) *p = cast(char)idx;
+        }
+        else if (flags & FLAGS_SHORT) {
+          short* p = va_arg!(short*)(va);
+          if (p !is null) *p = cast(short)idx;
         }
         else {
           int* p = va_arg!(int*)(va);
