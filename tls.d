@@ -64,8 +64,9 @@ void* __tls_get_addr(tls_index* ti) nothrow @nogc
     void* tp = thread_pointer();
     if (tp is null || ti is null)
         return null;
-    auto dtv = cast(dtv_entry**)*cast(void**)(cast(size_t)tp + DTV_OFFSET);
+    // The TCB field at DTV_OFFSET already holds the DTV array pointer.
+    auto dtv = cast(dtv_entry*)*cast(void**)(cast(size_t)tp + DTV_OFFSET);
     if (dtv is null || ti.ti_module == 0)
         return null;
-    return cast(void*)(cast(size_t)(*dtv)[ti.ti_module].val + ti.ti_offset);
+    return cast(void*)(cast(size_t)dtv[ti.ti_module].val + ti.ti_offset);
 }

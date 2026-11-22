@@ -10,10 +10,10 @@ MUSL_INCLUDE_DIR=${MUSL_INCLUDE_DIR:-/usr/include/x86_64-linux-musl}
 CRT0="${BUTTERLIBC_DIR}/crt0.o"
 for arg in "$@"; do
     case "$arg" in
-        -shared|--shared|-Wl,-shared) CRT0="" ;;
+        -shared|--shared|-Wl,-shared|-Wl,*-shared*) CRT0="" ;;
     esac
 done
-exec cc -nostdlib $CRT0 \
+exec cc -nostdlib ${CRT0:+"$CRT0"} \
     -I"${MUSL_INCLUDE_DIR}" \
     "$@" -fno-stack-protector -ffreestanding -fno-builtin \
     -L"${BUTTERLIBC_DIR}" -lbutterc

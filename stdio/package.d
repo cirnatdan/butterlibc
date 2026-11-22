@@ -1346,6 +1346,11 @@ version (Linux_Musl) { //musl
 
     extern (C):
 
+    // Generic declarations; per-platform definitions follow below.
+    int fprintf(FILE* stream, scope const char* format, ...);
+    int vfprintf(FILE* stream, const char* format, va_list args);
+    int fputs(scope const char* s, FILE* stream);
+
     // Import internal functions from printf.d
     extern void _putchar(char* character);
     extern int _vsnprintf(void function(char, void*, size_t, size_t), char*, size_t, const char*, va_list);
