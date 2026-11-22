@@ -50,7 +50,14 @@ Create a `buttercc` script that wraps the system compiler. Example:
 # -lbutterc after the caller's object files so --as-needed linkers keep it.
 BUTTERLIBC_DIR=${BUTTERLIBC_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
 MUSL_INCLUDE_DIR=${MUSL_INCLUDE_DIR:-/usr/include/x86_64-linux-musl}
-exec cc -nostdlib "${BUTTERLIBC_DIR}/crt0.o" \
+# crt0.o provides the executable entry point; omit it for shared libraries
+CRT0="${BUTTERLIBC_DIR}/crt0.o"
+for arg in "$@"; do
+    case "$arg" in
+        -shared|--shared|-Wl,-shared) CRT0="" ;;
+    esac
+done
+exec cc -nostdlib $CRT0 \
     -I"${MUSL_INCLUDE_DIR}" \
     "$@" -fno-stack-protector -ffreestanding -fno-builtin \
     -L"${BUTTERLIBC_DIR}" -lbutterc

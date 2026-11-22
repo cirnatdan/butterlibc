@@ -32,49 +32,7 @@ version (Posix):
 extern (C) nothrow @nogc:
 @system:
 
-version (Linux_Musl)
-{
-    // Checked before CRuntime_Glibc because musl-targeted builds define both,
-    // and this branch must win so its ioctl implementation is the sole definition.
-    import posix.termios;
-    import stdarg;
-    import sys.linux.syscalls;
-
-    enum TIOCGWINSZ = 0x5413;
-    enum TIOCSWINSZ = 0x5414;
-
-    struct winsize
-    {
-        ushort ws_row;
-        ushort ws_col;
-        ushort ws_xpixel;
-        ushort ws_ypixel;
-    }
-
-    // ioctl implementation following musl libc pattern with varargs
-    extern(C) int ioctl(int __fd, c_ulong __request, ...)
-    {
-        void* arg;
-        va_list ap;
-        va_start(ap, __request);
-        arg = va_arg!(void*)(ap);
-        va_end(ap);
-
-        version (X86_64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else version (AArch64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else
-        {
-            return -1;
-        }
-    }
-}
-else version (CRuntime_Glibc)
+version (CRuntime_Glibc)
 {
     import posix.termios; // tcflag_t, speed_t, cc_t
 
@@ -454,6 +412,26 @@ else version (CRuntime_Bionic)
 {
     int ioctl(int, int, ...);
 }
+else version (Linux_Musl)
+{
+    // Declarations only; the implementation lives in the top-level
+    // version (Linux_Musl) block at the end of this file so it is
+    // defined exactly once regardless of which other versions are set.
+    import posix.termios;
+
+    enum TIOCGWINSZ = 0x5413;
+    enum TIOCSWINSZ = 0x5414;
+
+    struct winsize
+    {
+        ushort ws_row;
+        ushort ws_col;
+        ushort ws_xpixel;
+        ushort ws_ypixel;
+    }
+
+    int ioctl(int __fd, c_ulong __request, ...);
+}
 else version (CRuntime_UClibc)
 {
     import core.sys.posix.termios;
@@ -782,5 +760,46 @@ else version (CRuntime_UClibc)
 else
 {
     static assert(false, "Unsupported platform");
+}
+
+// Linux_Musl specific implementation of ioctl (defined once, outside the
+// version chain, so it cannot collide with the declaration-only branches).
+version (Linux_Musl)
+{
+    import stdarg;
+    import sys.linux.syscalls;
+    import errno : errno, ENOSYS;
+
+    // ioctl implementation following musl libc pattern with varargs
+    extern(C) int ioctl(int __fd, c_ulong __request, ...)
+    {
+        void* arg;
+        va_list ap;
+        va_start(ap, __request);
+        arg = va_arg!(void*)(ap);
+        va_end(ap);
+
+        long ret;
+        version (X86_64)
+        {
+            ret = syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
+        {
+            ret = syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else
+        {
+            errno = ENOSYS;
+            return -1;
+        }
+        if (ret < 0)
+        {
+            // translate the kernel's -errno result to the libc convention
+            errno = cast(int)(-ret);
+            return -1;
+        }
+        return cast(int)ret;
+    }
 }
 
