@@ -1426,6 +1426,9 @@ version (Linux_Musl) { //musl
             }
             return -1;
         }
+        // byte-output establishes byte orientation (C99)
+        if (stream.mode == 0)
+            stream.mode = -1;
         _vfprintf_state st;
         st.stream = stream;
         st.base = 0;
@@ -1453,6 +1456,9 @@ version (Linux_Musl) { //musl
             }
             return EOF;
         }
+        // byte-output establishes byte orientation (C99)
+        if (stream.mode == 0)
+            stream.mode = -1;
         size_t len = 0;
         while (s[len]) len++;
         if (len > 0 && stream.write(stream, cast(const(ubyte*))s, len) != len) {

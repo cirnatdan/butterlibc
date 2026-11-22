@@ -189,7 +189,9 @@ pragma(inline):
 static uint _strnlen_s(const char* str, size_t maxsize)
 {
   const(char)* s;
-  for (s = str; *s && maxsize--; ++s){}
+  // check the remaining bound before dereferencing so a nonterminated
+  // buffer of exactly maxsize bytes is not read past its end
+  for (s = str; maxsize && *s; ++s) { maxsize--; }
   return cast(uint)(s - str);
 }
 
@@ -835,9 +837,11 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
             out_fct(' ', buffer, idx++, maxlen);
           }
         }
-        // string output
-        while ((*p != 0) && (!(flags & FLAGS_PRECISION) || precision--)) {
+        // string output; check the remaining precision before dereferencing
+        size_t remaining = (flags & FLAGS_PRECISION) ? precision : cast(size_t)-1;
+        while (remaining > 0 && *p != 0) {
           out_fct(*(p++), buffer, idx++, maxlen);
+          remaining--;
         }
         // post padding
         if (flags & FLAGS_LEFT) {
