@@ -58,9 +58,16 @@ nothrow:
 
 // Generic declarations at module scope so every configuration exposes
 // these names; per-platform definitions follow in the version blocks below.
-int fprintf(FILE* stream, scope const char* format, ...);
-int vfprintf(FILE* stream, const char* format, va_list args);
-int fputs(scope const char* s, FILE* stream);
+// (Excluded for MinGW, which aliases these names to __mingw_* functions.)
+version (MinGW)
+{
+}
+else
+{
+    int fprintf(FILE* stream, scope const char* format, ...);
+    int vfprintf(FILE* stream, const char* format, va_list args);
+    int fputs(scope const char* s, FILE* stream);
+}
 
 version (CRuntime_DigitalMars)
 {
@@ -1412,7 +1419,7 @@ version (Linux_Musl) { //musl
     /// vfprintf for Linux_Musl - write formatted output to stream with va_list
     int vfprintf(FILE* stream, const char* format, va_list args)
     {
-        if (stream is null || stream.write is null) {
+        if (stream is null || stream.write is null || (stream.flags & F_NOWR)) {
             if (stream !is null) {
                 auto pflags = cast(uint*)&stream.flags;
                 *pflags = *pflags | F_ERR;
@@ -1439,7 +1446,7 @@ version (Linux_Musl) { //musl
     int fputs(scope const char* s, FILE* stream)
     {
         if (!s) return EOF;
-        if (stream is null || stream.write is null) {
+        if (stream is null || stream.write is null || (stream.flags & F_NOWR)) {
             if (stream !is null) {
                 auto pflags = cast(uint*)&stream.flags;
                 *pflags = *pflags | F_ERR;

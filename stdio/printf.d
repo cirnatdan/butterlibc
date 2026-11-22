@@ -882,6 +882,34 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
         format++;
         break;
 
+      case 'n' :
+      {
+        // write-back specifier: store the number of characters written so
+        // far through the pointer argument (consumed like any other arg)
+        if (flags & FLAGS_LONG_LONG) {
+          long* p = va_arg!(long*)(va);
+          if (p !is null) *p = cast(long)idx;
+        }
+        else if (flags & FLAGS_LONG) {
+          long* p = va_arg!(long*)(va);
+          if (p !is null) *p = cast(long)idx;
+        }
+        else if (flags & FLAGS_SHORT) {
+          short* p = va_arg!(short*)(va);
+          if (p !is null) *p = cast(short)idx;
+        }
+        else if (flags & FLAGS_CHAR) {
+          char* p = va_arg!(char*)(va);
+          if (p !is null) *p = cast(char)idx;
+        }
+        else {
+          int* p = va_arg!(int*)(va);
+          if (p !is null) *p = cast(int)idx;
+        }
+        format++;
+        break;
+      }
+
       default :
         out_fct(*format, buffer, idx++, maxlen);
         format++;
