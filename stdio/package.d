@@ -56,6 +56,12 @@ extern (C):
 nothrow:
 @nogc:
 
+// Generic declarations at module scope so every configuration exposes
+// these names; per-platform definitions follow in the version blocks below.
+int fprintf(FILE* stream, scope const char* format, ...);
+int vfprintf(FILE* stream, const char* format, va_list args);
+int fputs(scope const char* s, FILE* stream);
+
 version (CRuntime_DigitalMars)
 {
     enum
@@ -1346,11 +1352,6 @@ version (Linux_Musl) { //musl
 
     extern (C):
 
-    // Generic declarations; per-platform definitions follow below.
-    int fprintf(FILE* stream, scope const char* format, ...);
-    int vfprintf(FILE* stream, const char* format, va_list args);
-    int fputs(scope const char* s, FILE* stream);
-
     // Import internal functions from printf.d
     extern void _putchar(char* character);
     extern int _vsnprintf(void function(char, void*, size_t, size_t), char*, size_t, const char*, va_list);
@@ -1411,6 +1412,13 @@ version (Linux_Musl) { //musl
     /// vfprintf for Linux_Musl - write formatted output to stream with va_list
     int vfprintf(FILE* stream, const char* format, va_list args)
     {
+        if (stream is null || stream.write is null) {
+            if (stream !is null) {
+                auto pflags = cast(uint*)&stream.flags;
+                *pflags = *pflags | F_ERR;
+            }
+            return -1;
+        }
         _vfprintf_state st;
         st.stream = stream;
         st.base = 0;
@@ -1431,6 +1439,13 @@ version (Linux_Musl) { //musl
     int fputs(scope const char* s, FILE* stream)
     {
         if (!s) return EOF;
+        if (stream is null || stream.write is null) {
+            if (stream !is null) {
+                auto pflags = cast(uint*)&stream.flags;
+                *pflags = *pflags | F_ERR;
+            }
+            return EOF;
+        }
         size_t len = 0;
         while (s[len]) len++;
         if (len > 0 && stream.write(stream, cast(const(ubyte*))s, len) != len) {
