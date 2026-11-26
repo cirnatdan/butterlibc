@@ -162,7 +162,7 @@ else
     extern (C)
     {
         private int getErrno() { return __erno; }      // for internal use
-        private int setErrno(int e) { return errno = e; }   // for internal use
+        private int setErrno(int e) { __erno = e; return __erno; }   // for internal use
     }
 }
 
