@@ -56,6 +56,19 @@ extern (C):
 nothrow:
 @nogc:
 
+// Generic declarations at module scope so every configuration exposes
+// these names; per-platform definitions follow in the version blocks below.
+int fputs(scope const char* s, FILE* stream);
+// (fprintf/vfprintf excluded for MinGW, which aliases them to __mingw_*.)
+version (MinGW)
+{
+}
+else
+{
+    int fprintf(FILE* stream, scope const char* format, ...);
+    int vfprintf(FILE* stream, const char* format, va_list args);
+}
+
 version (CRuntime_DigitalMars)
 {
     enum
@@ -1217,12 +1230,6 @@ version (MinGW)
 else
 {
     ///
-    int fprintf(FILE* stream, scope const char* format, ...)
-    {
-        //stub
-        return 0;
-    }
-    ///
     int fscanf(FILE* stream, scope const char* format, ...);
     ///
     int sprintf(scope char* s, scope const char* format, ...);
@@ -1232,8 +1239,6 @@ else
         //stub
         return 0;
     }
-    ///
-    int vfprintf(FILE* stream, scope const char* format, va_list arg);
     ///
     int vfscanf(FILE* stream, scope const char* format, va_list arg);
     ///
@@ -1349,6 +1354,49 @@ version (Linux_Musl) { //musl
             return __overflow(f, cast(ubyte)c);
         }
     }
+
+    import stdarg;
+
+    extern (C):
+
+    // Import internal functions from printf.d
+    extern void _putchar(char* character);
+    extern int _vsnprintf(void function(char, void*, size_t, size_t), char*, size_t, const char*, va_list);
+
+    /// fprintf for Linux_Musl - write formatted output to stream
+    /// (vfprintf itself lives in stdio/vfprintf.d)
+    int fprintf(FILE* stream, scope const char* format, ...)
+    {
+        va_list va;
+        va_start(va, format);
+        const int ret = vfprintf(stream, format, va);
+        va_end(va);
+        return ret;
+    }
+
+    /// fputs for Linux_Musl - write a string to stream
+    int fputs(scope const char* s, FILE* stream)
+    {
+        if (!s) return EOF;
+        if (stream is null || stream.write is null || (stream.flags & F_NOWR)) {
+            if (stream !is null) {
+                auto pflags = cast(uint*)&stream.flags;
+                *pflags = *pflags | F_ERR;
+            }
+            return EOF;
+        }
+        // byte-output establishes byte orientation (C99)
+        if (stream.mode == 0)
+            stream.mode = -1;
+        size_t len = 0;
+        while (s[len]) len++;
+        if (len > 0 && stream.write(stream, cast(const(ubyte*))s, len) != len) {
+            auto pflags = cast(uint*)&stream.flags;
+            *pflags = *pflags | F_ERR;
+            return EOF;
+        }
+        return 0;
+    }
 }
 //musl
 static wint_t __fgetwc_unlocked_internal(FILE *f)
@@ -1410,12 +1458,6 @@ wint_t fgetwc(FILE* fp)
 
 ///
 char* fgets(char* s, int n, FILE* stream);
-///
-int   fputs(scope const char* s, FILE* stream)
-{
-    //stub
-    return 0;
-}
 ///
 char* gets(char* s);
 ///

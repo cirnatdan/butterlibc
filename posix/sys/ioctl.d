@@ -414,7 +414,13 @@ else version (CRuntime_Bionic)
 }
 else version (Linux_Musl)
 {
+    // Declarations only; the implementation lives in the top-level
+    // version (Linux_Musl) block at the end of this file so it is
+    // defined exactly once regardless of which other versions are set.
     import posix.termios;
+
+    enum TIOCGWINSZ = 0x5413;
+    enum TIOCSWINSZ = 0x5414;
 
     struct winsize
     {
@@ -424,31 +430,7 @@ else version (Linux_Musl)
         ushort ws_ypixel;
     }
 
-    // ioctl implementation following musl libc pattern with varargs
-    int ioctl(int __fd, c_ulong __request, ...)
-    {
-        import stdarg;
-        import sys.linux.syscalls;
-        
-        void* arg;
-        va_list ap;
-        va_start(ap, __request);
-        arg = va_arg!(void*)(ap);
-        va_end(ap);
-        
-        version (X86_64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else version (AArch64)
-        {
-            return cast(int)syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
-        }
-        else
-        {
-            return -1;
-        }
-    }
+    int ioctl(int __fd, c_ulong __request, ...);
 }
 else version (CRuntime_UClibc)
 {
@@ -778,5 +760,46 @@ else version (CRuntime_UClibc)
 else
 {
     static assert(false, "Unsupported platform");
+}
+
+// Linux_Musl specific implementation of ioctl (defined once, outside the
+// version chain, so it cannot collide with the declaration-only branches).
+version (Linux_Musl)
+{
+    import stdarg;
+    import sys.linux.syscalls;
+    import errno : errno, ENOSYS;
+
+    // ioctl implementation following musl libc pattern with varargs
+    extern(C) int ioctl(int __fd, c_ulong __request, ...)
+    {
+        void* arg;
+        va_list ap;
+        va_start(ap, __request);
+        arg = va_arg!(void*)(ap);
+        va_end(ap);
+
+        long ret;
+        version (X86_64)
+        {
+            ret = syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else version (AArch64)
+        {
+            ret = syscall(SYS.ioctl, __fd, cast(long)__request, cast(long)arg);
+        }
+        else
+        {
+            errno = ENOSYS;
+            return -1;
+        }
+        if (ret < 0)
+        {
+            // translate the kernel's -errno result to the libc convention
+            errno = cast(int)(-ret);
+            return -1;
+        }
+        return cast(int)ret;
+    }
 }
 

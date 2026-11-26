@@ -189,7 +189,9 @@ pragma(inline):
 static uint _strnlen_s(const char* str, size_t maxsize)
 {
   const(char)* s;
-  for (s = str; *s && maxsize--; ++s){}
+  // check the remaining bound before dereferencing so a nonterminated
+  // buffer of exactly maxsize bytes is not read past its end
+  for (s = str; maxsize && *s; ++s) { maxsize--; }
   return cast(uint)(s - str);
 }
 
@@ -835,9 +837,11 @@ static if (PRINTF_SUPPORT_EXPONENTIAL) {
             out_fct(' ', buffer, idx++, maxlen);
           }
         }
-        // string output
-        while ((*p != 0) && (!(flags & FLAGS_PRECISION) || precision--)) {
+        // string output; check the remaining precision before dereferencing
+        size_t remaining = (flags & FLAGS_PRECISION) ? precision : cast(size_t)-1;
+        while (remaining > 0 && *p != 0) {
           out_fct(*(p++), buffer, idx++, maxlen);
+          remaining--;
         }
         // post padding
         if (flags & FLAGS_LEFT) {
@@ -881,6 +885,34 @@ static if (PRINTF_SUPPORT_LONG_LONG) {
         out_fct('%', buffer, idx++, maxlen);
         format++;
         break;
+
+      case 'n' :
+      {
+        // write-back specifier: store the number of characters written so
+        // far through the pointer argument (consumed like any other arg)
+        if (flags & FLAGS_LONG_LONG) {
+          long* p = va_arg!(long*)(va);
+          if (p !is null) *p = cast(long)idx;
+        }
+        else if (flags & FLAGS_LONG) {
+          long* p = va_arg!(long*)(va);
+          if (p !is null) *p = cast(long)idx;
+        }
+        else if (flags & FLAGS_CHAR) {
+          char* p = va_arg!(char*)(va);
+          if (p !is null) *p = cast(char)idx;
+        }
+        else if (flags & FLAGS_SHORT) {
+          short* p = va_arg!(short*)(va);
+          if (p !is null) *p = cast(short)idx;
+        }
+        else {
+          int* p = va_arg!(int*)(va);
+          if (p !is null) *p = cast(int)idx;
+        }
+        format++;
+        break;
+      }
 
       default :
         out_fct(*format, buffer, idx++, maxlen);

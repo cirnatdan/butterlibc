@@ -1,0 +1,19 @@
+#!/bin/sh
+# buttercc - Compiler wrapper for butterlibc
+# Resolve the butterlibc directory from this script's own location so the
+# wrapper works from any checkout, and put -lbutterc after the caller's
+# object files so --as-needed linkers retain the library.
+BUTTERLIBC_DIR=${BUTTERLIBC_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}
+MUSL_INCLUDE_DIR=${MUSL_INCLUDE_DIR:-/usr/include/x86_64-linux-musl}
+# crt0.o provides the executable entry point; omit it for shared libraries
+# so that e.g. `buttercc -shared -Wl,-z,defs foo.o -o libfoo.so` can link.
+CRT0="${BUTTERLIBC_DIR}/crt0.o"
+for arg in "$@"; do
+    case "$arg" in
+        -shared|--shared|-Wl,-shared|-Wl,*-shared*) CRT0="" ;;
+    esac
+done
+exec cc -nostdlib ${CRT0:+"$CRT0"} \
+    -I"${MUSL_INCLUDE_DIR}" \
+    "$@" -fno-stack-protector -ffreestanding -fno-builtin \
+    -L"${BUTTERLIBC_DIR}" -lbutterc
