@@ -1081,11 +1081,11 @@ else version (CRuntime_Bionic)
 else version (Linux_Musl)
 {
     // needs tail const
-    __gshared FILE* stdin;
+    extern __gshared FILE* stdin;
     ///
     extern __gshared FILE* stdout;
     ///
-    __gshared FILE* stderr;
+    extern __gshared FILE* stderr;
     enum
     {
         ///
